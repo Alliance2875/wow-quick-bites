@@ -1,51 +1,128 @@
 @import "tailwindcss";
 
-/* Dark theme only (no toggle) — palette taken from the WOW Quick Bites reference site */
-:root {
-  color-scheme: dark;
-  --background: oklch(14% 0.005 90);
-  --foreground: oklch(97% 0.01 90);
-  --card: oklch(22% 0.008 90);
-  --primary: oklch(78% 0.15 88);
-  --primary-foreground: oklch(16% 0.01 90);
-  --secondary: oklch(32% 0.04 88);
-  --secondary-foreground: oklch(92% 0.08 90);
-  --muted: oklch(27% 0.008 90);
-  --muted-foreground: oklch(70% 0.015 90);
-  --border: oklch(100% 0 0 / 0.09);
-  --shadow-glow: 0 10px 40px -10px oklch(78% 0.15 88 / 0.45);
+/*
+ * Theme tokens — taken from the Figma designs (picsDesigns/).
+ * Light is the default; [data-theme="dark"] on <html> switches to the dark palette.
+ * The attribute is set before first paint by the inline script in app/[lang]/layout.tsx.
+ * Components only use the semantic utilities below (bg-card, text-accent, …), never raw hex.
+ */
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+  --background: #f5f5f1;
+  --foreground: #191a15;
+  --card: #ffffff;
+  --surface: #ffffff;
+  --primary: #e8b923;
+  --primary-foreground: #111008;
+  --accent: #78600d;
+  --soft: #fbf2cf;
+  --tag: #fbf2cf;
+  --tag-foreground: #78600d;
+  --muted: #edede6;
+  --muted-foreground: #717468;
+  --border: #dfe0d7;
+  --input: #f0f0ea;
+  --overlay: rgb(0 0 0 / 0.6);
+  --danger: #c62828;
+  --shadow-glow: 0 10px 30px -12px rgb(120 96 13 / 0.35);
 }
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #0b0a07;
+  --foreground: #f7f6f2;
+  --card: #201d17;
+  --surface: #201d17; /* footer */
+  --primary: #e8b923;
+  --primary-foreground: #111008;
+  --accent: #e8b923; /* prices, links, highlighted words, footer headings */
+  --soft: #383019; /* highlight boxes, selected radio cards */
+  --tag: #443a1a;
+  --tag-foreground: #ddcb83;
+  --muted: #353229; /* "Optional" chips, inactive step bars */
+  --muted-foreground: #a49d8f;
+  --border: #353229;
+  --input: #191813;
+  --overlay: rgb(0 0 0 / 0.7);
+  --danger: #ef5350;
+  --shadow-glow: 0 10px 40px -10px rgb(232 185 35 / 0.45);
+}
+
+/* `dark:` follows the data-theme attribute, not the OS setting */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+@custom-variant light (&:where([data-theme="light"], [data-theme="light"] *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
+  --color-surface: var(--surface);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-soft: var(--soft);
+  --color-tag: var(--tag);
+  --color-tag-foreground: var(--tag-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
+  --color-input: var(--input);
+  --color-overlay: var(--overlay);
+  --color-danger: var(--danger);
   --shadow-glow: var(--shadow-glow);
-  --font-sans: var(--font-dm-sans);
-  --font-display: var(--font-dm-serif);
-  --font-script: var(--font-caveat);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  /* Ultra-wide screens only: beyond this the page stops growing and stays centred */
+  --container-page: 120rem;
+}
+
+/*
+ * Page width + side padding, shared by header, footer and every page (one place to tune it).
+ * The side space is a share of the screen width, never a fixed size, so every screen shows the
+ * same proportions whatever its Windows display scaling (100% → 1920px, 125% → 1536px, 150% → 1280px).
+ * Computers (≥ 1280px): 9.2% per side = the look approved on a 1920px screen (about 176px each side),
+ * combined with the proportional root font size below.
+ */
+@utility page-container {
+  margin-inline: auto;
+  width: 100%;
+  max-width: var(--container-page);
+  padding-inline: max(1rem, 5vw);
+  @variant xl {
+    padding-inline: 9.2vw;
+  }
+}
+
+/*
+ * Proportional scaling on computers: every size is in rem (Tailwind), and 1rem follows the screen
+ * width — 16px on a 1920px-wide screen, the reference. So the whole design (text, cards, video,
+ * spacing) keeps the same proportions whatever the Windows display scaling:
+ *   100% → 1920px wide → 1rem = 16px      125% → 1536px → 12.8px      150% → 1280px → 10.67px
+ * High-density screens (Windows scaling ≥ 125%) follow the formula exactly; standard screens never
+ * go below 12px so text stays readable. Phones and tablets (< 1280px) keep the normal 16px.
+ */
+@media (min-width: 80rem) {
+  html {
+    font-size: clamp(12px, 100vw / 120, 20px);
+  }
+}
+@media (min-width: 80rem) and (min-resolution: 1.2dppx) {
+  html {
+    font-size: clamp(10px, 100vw / 120, 20px);
+  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans);
 }
 
-/* Headings use the serif style from the light design */
 h1,
 h2,
 h3 {
-  font-family: var(--font-dm-serif), Georgia, serif;
-  font-weight: 400;
-  letter-spacing: -0.01em;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 /* Mobile menu built on <details>: hide the default marker */
