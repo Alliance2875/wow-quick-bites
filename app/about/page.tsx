@@ -1,9 +1,20 @@
-
+import SiteHeader from "@/components/SiteHeader";
+import SiteFooter from "@/components/SiteFooter";
+import { Suspense } from "react";
 
 export default function About() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      This is the ABOUT PAGE
+    <div>
+      <SiteHeader current="/about" />
+          <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-10 sm:px-6 md:py-14">
+            {/* Suspense is required by Next.js when a page reads the URL query (useSearchParams) */}
+            <Suspense fallback={null}>
+              This is the ABOUT PAGE
+            </Suspense>
+          </main>
+      <SiteFooter />
     </div>
+
+    
   );
 }
