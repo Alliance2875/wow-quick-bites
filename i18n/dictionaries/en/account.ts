@@ -11,11 +11,19 @@ export const account = {
     showPassword: "Show password",
     hidePassword: "Hide password",
   },
+  errors: {
+    invalid: "Incorrect email or password.",
+    suspended: "This staff account is suspended. Contact the superadmin.",
+    exists: "An account already exists with this email. Sign in instead.",
+    missing: "Fill in every field (password: at least 6 characters).",
+    server: "Sign-in is unavailable right now. Please try again later.",
+  },
   signIn: {
     metaTitle: "Sign in",
     title: "Welcome back",
     subtitle: "Sign in to order and track your food.",
     submit: "Sign in",
+    pending: "Signing in…",
     forgot: "Forgot password?",
     switch: "New here? Create an account",
   },
@@ -24,6 +32,7 @@ export const account = {
     title: "Create account",
     subtitle: "Join WOW Quick Bites in seconds.",
     submit: "Create account",
+    pending: "Creating your account…",
     switch: "Already have an account? Sign in",
   },
   recovery: {

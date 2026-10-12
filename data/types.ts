@@ -76,3 +76,108 @@ export type Promotion = {
   /** yellow = filled yellow block, plain = card background */
   tone: "yellow" | "plain";
 };
+
+// ───────── Client area + staff portal ─────────
+
+/** Permanent client code: identifies a person across all purchases ("WQB001A"), never an order. */
+export type ClientCode = string;
+
+export type Client = {
+  code: ClientCode;
+  name: string;
+  email: string;
+  phone?: string;
+};
+
+export type StaffRole = "manager" | "superadmin";
+
+/** Content rights a superadmin can delegate to one manager (see lib/auth/roles.ts → grantScopes). */
+export type ContentGrant = {
+  grantedBy: string;
+  scopes: ("food" | "drinks" | "labels" | "ads" | "publish")[];
+  /** ISO dates, Kigali time */
+  startsAt: string;
+  /** No end date = until revoked */
+  expiresAt?: string;
+};
+
+export type StaffMember = {
+  id: string;
+  name: string;
+  email: string;
+  role: StaffRole;
+  /** Manager register coverage */
+  assignment: "pickup-register" | "backup" | "none";
+  duty: "on" | "off";
+  status: "active" | "suspended";
+  contentGrant?: ContentGrant;
+};
+
+export type OrderStage = "new" | "accepted" | "preparing" | "ready" | "completed" | "cancelled";
+
+export type PortalOrder = {
+  id: string;
+  clientCode: ClientCode;
+  /** Staff id of the manager in charge */
+  managerId: string;
+  /** ISO date, Kigali time */
+  placedAt: string;
+  fulfilment: "pickup" | "delivery";
+  payment: "pay-on-pickup" | "mtn-momo" | "airtel-money";
+  paymentStatus: "pending" | "paid" | "not-charged";
+  stage: OrderStage;
+  /** Prices come from the menu (data/menu.ts): order totals are computed, never stored twice */
+  lines: { itemId: string; quantity: number }[];
+  /** When each stage was reached (ISO dates) */
+  history: Partial<Record<OrderStage, string>>;
+};
+
+export type ChatMessage = {
+  id: string;
+  clientCode: ClientCode;
+  from: "client" | "manager";
+  /** Staff id when from = manager */
+  authorId?: string;
+  orderId?: string;
+  text: Localized;
+  sentAt: string;
+  readByClient: boolean;
+  readByManager: boolean;
+};
+
+export type ClientNotification = {
+  id: string;
+  clientCode: ClientCode;
+  orderId: string;
+  stage: OrderStage;
+  title: Localized;
+  text: Localized;
+  at: string;
+  read: boolean;
+};
+
+export type AuditEvent = {
+  id: string;
+  at: string;
+  /** Staff id, or "system" */
+  actorId: string;
+  /** orders = register activity, content = menu/ads, access = people and permissions */
+  scope: "orders" | "content" | "access";
+  /** Person affected by an access change ("Rwasibo Alexis Junior → Eric") */
+  targetId?: string;
+  text: Localized;
+};
+
+export type Campaign = {
+  /** Same id as the promotion it advertises (data/promotions.ts) */
+  promotionId: string;
+  status: "published" | "draft" | "scheduled";
+  tag: "promotion" | "new" | "offer";
+  placement: "home-offers" | "home-hero";
+  /** Menu category the call-to-action opens, or null for the whole menu */
+  ctaCategory: CategoryId | null;
+  startsAt?: string;
+  endsAt?: string;
+  /** Short schedule line under the card ("Weekdays") */
+  schedule?: Localized;
+};

@@ -1,32 +1,27 @@
 "use client";
 
 import { createStore } from "@/lib/create-store";
+import type { Role } from "./roles";
 
-// MOCK session kept in localStorage until the backend auth API exists.
-// Replace signIn/signUp/signOut with real API calls; components only use this module.
+// Public profile of the signed-in person, kept in localStorage so the static storefront
+// (header, cart, checkout) can show the name and client code without a server round trip.
+// It is a display copy only: access to the client area and the staff portal is decided on the
+// server from the signed HttpOnly session cookie (lib/auth/token.ts, proxy.ts, lib/auth/dal.ts).
+// Written by the sign-in/sign-up forms after the Server Action succeeds, cleared on sign-out.
 
 export type User = {
   name: string;
   email: string;
   phone?: string;
-  /** Permanent client code shown at checkout ("WQB001A") */
+  /** Permanent client code shown at checkout ("WQB001A"); empty for staff */
   clientCode: string;
+  role: Role;
 };
 
 const store = createStore<User | null>("wqb-session", null);
 
 export const useSession = store.useValue;
 
-const MOCK_CLIENT_CODE = "WQB001A";
+export const rememberSession = (user: User) => store.set(user);
 
-const nameFromEmail = (email: string) => {
-  const local = email.split("@")[0] || "Guest";
-  return local.charAt(0).toUpperCase() + local.slice(1);
-};
-
-export const signIn = (email: string) =>
-  store.set({ name: nameFromEmail(email), email, clientCode: MOCK_CLIENT_CODE });
-
-export const signUp = (user: Omit<User, "clientCode">) => store.set({ ...user, clientCode: MOCK_CLIENT_CODE });
-
-export const signOut = () => store.set(null);
+export const forgetSession = () => store.set(null);

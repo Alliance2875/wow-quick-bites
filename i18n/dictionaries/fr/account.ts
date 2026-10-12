@@ -13,11 +13,19 @@ export const account: AccountDict = {
     showPassword: "Afficher le mot de passe",
     hidePassword: "Masquer le mot de passe",
   },
+  errors: {
+    invalid: "Email ou mot de passe incorrect.",
+    suspended: "Ce compte du personnel est suspendu. Contactez le superadministrateur.",
+    exists: "Un compte existe déjà avec cet email. Connectez-vous plutôt.",
+    missing: "Remplissez tous les champs (mot de passe : au moins 6 caractères).",
+    server: "La connexion est indisponible pour le moment. Réessayez plus tard.",
+  },
   signIn: {
     metaTitle: "Connexion",
     title: "Heureux de vous revoir",
     subtitle: "Connectez-vous pour commander et suivre vos plats.",
     submit: "Se connecter",
+    pending: "Connexion…",
     forgot: "Mot de passe oublié ?",
     switch: "Nouveau ici ? Créez un compte",
   },
@@ -26,6 +34,7 @@ export const account: AccountDict = {
     title: "Créer un compte",
     subtitle: "Rejoignez WOW Quick Bites en quelques secondes.",
     submit: "Créer un compte",
+    pending: "Création de votre compte…",
     switch: "Vous avez déjà un compte ? Connectez-vous",
   },
   recovery: {
