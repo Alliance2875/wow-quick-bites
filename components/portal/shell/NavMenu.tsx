@@ -4,8 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Icon, { type IconName } from "@/components/shared/ui/Icon";
 import { cn } from "@/lib/format";
-import { buildConversations, unreadForClient, unreadForManager, visibleTo } from "@/lib/portal/conversations";
-import { useMessages, useNotifications, useOrders } from "@/lib/portal/store";
+import { useNotifications } from "@/lib/portal/store";
 
 export type NavItem = {
   href: string;
@@ -16,7 +15,7 @@ export type NavItem = {
   /** Anchor inside another page (never shown as active) */
   anchor?: boolean;
   /** Live unread counter */
-  badge?: "staffMessages" | "clientNotifications" | "clientChat";
+  badge?: "clientNotifications";
 };
 
 export type NavSection = { label: string; items: NavItem[] };
@@ -24,16 +23,11 @@ export type NavSection = { label: string; items: NavItem[] };
 export const isActivePath = (pathname: string, item: Pick<NavItem, "href" | "exact" | "anchor">) =>
   !item.anchor && (pathname === item.href || (!item.exact && pathname.startsWith(`${item.href}/`)));
 
-/** Live counters: they update as soon as a message is read or sent in another view. */
-function useBadges(viewer: { id: string; role: string; clientCode?: string }) {
-  const messages = useMessages();
-  const orders = useOrders();
+/** Live counters: they update as soon as a notification is read. */
+function useBadges(viewer: { clientCode?: string }) {
   const notifications = useNotifications(viewer.clientCode);
-  const conversations = viewer.role === "client" ? [] : visibleTo(buildConversations(messages, orders), viewer);
   return {
-    staffMessages: conversations.filter((c) => unreadForManager(c) > 0).length,
     clientNotifications: notifications.filter((n) => !n.read).length,
-    clientChat: viewer.clientCode ? unreadForClient(messages, viewer.clientCode) : 0,
   };
 }
 
@@ -71,10 +65,8 @@ export default function NavMenu({
                     {item.icon && <Icon name={item.icon} className="h-[1.125rem] w-[1.125rem] shrink-0" />}
                     <span className="min-w-0 flex-1">
                       {item.label}
-                      {/* Staff design: "Messages · 2" */}
-                      {item.badge === "staffMessages" && count > 0 && ` · ${count}`}
                     </span>
-                    {item.badge && item.badge !== "staffMessages" && count > 0 && (
+                    {item.badge && count > 0 && (
                       <span className="text-xs font-semibold text-accent">{count}</span>
                     )}
                   </Link>

@@ -132,19 +132,6 @@ export type PortalOrder = {
   history: Partial<Record<OrderStage, string>>;
 };
 
-export type ChatMessage = {
-  id: string;
-  clientCode: ClientCode;
-  from: "client" | "manager";
-  /** Staff id when from = manager */
-  authorId?: string;
-  orderId?: string;
-  text: Localized;
-  sentAt: string;
-  readByClient: boolean;
-  readByManager: boolean;
-};
-
 export type ClientNotification = {
   id: string;
   clientCode: ClientCode;

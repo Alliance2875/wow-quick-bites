@@ -40,7 +40,7 @@ export const account = {
     breadcrumbSignIn: "Sign in",
     breadcrumb: "Password recovery",
     title: "Back to your WOW account",
-    subtitle: "Recover your password and return to ordering, tracking and chat.",
+    subtitle: "Recover your password and return to ordering and tracking.",
     heroTitle: "Fresh Food. Amazing Taste.",
     heroTagline: "WOW Quick Bites by Rwasibo",
     request: {

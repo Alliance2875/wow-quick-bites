@@ -39,7 +39,6 @@ export const order = {
     amountDue: "Amount due",
   },
   track: "Track order {id}",
-  chat: "Open chat",
   notifications: "Notifications",
   myOrders: "My orders",
   none: {

@@ -24,7 +24,6 @@ export const portal = {
     dashboard: "Dashboard",
     myOrders: "My orders",
     notifications: "Notifications",
-    chat: "Chat",
     overview: "Overview",
     menuAds: "Menu & Ads",
     managers: "Managers",
@@ -32,7 +31,6 @@ export const portal = {
     auditLog: "Audit log",
     orderQueue: "Order queue",
     orderDetail: "Order detail",
-    messages: "Messages",
   },
   shell: {
     viewStorefront: "View storefront",

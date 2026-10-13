@@ -158,12 +158,8 @@ export default function OrderConfirmation({ lang, dict }: { lang: Locale; dict: 
             </dl>
           </section>
 
-          {/* Tracking, chat, notifications and order history pages do not exist yet */}
           <ButtonLink href={href(routes.orderConfirmation)} block size="lg">
             {fill(t.track, { id: order.id })} <Icon name="arrowRight" className="h-4 w-4" />
-          </ButtonLink>
-          <ButtonLink href={href(routes.contact)} block size="lg" variant="secondary">
-            {t.chat} <Icon name="arrowRight" className="h-4 w-4" />
           </ButtonLink>
           <div className="flex justify-between text-sm font-semibold text-accent">
             <span>{t.notifications} →</span>

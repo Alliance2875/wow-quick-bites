@@ -17,7 +17,7 @@ import type { Dictionary } from "@/i18n/get-dictionary";
 import { cn, fill, formatPrice, plural } from "@/lib/format";
 import { formatAmount, formatDateTime, formatTime } from "@/lib/portal/format";
 import { isActiveOrder, itemCount, orderLines, orderTotal, stageFlow } from "@/lib/portal/orders";
-import { moveOrder, useMessages, useOrders } from "@/lib/portal/store";
+import { moveOrder, useOrders } from "@/lib/portal/store";
 import { localePath, routes } from "@/lib/routes";
 import RegisterAction, { canAct, type StaffViewer } from "./RegisterAction";
 
@@ -39,10 +39,6 @@ export default function StaffOrderView({
   const client = getClient(order.clientCode)?.name ?? order.clientCode;
   const manager = getStaff(order.managerId)?.name ?? "—";
   const total = orderTotal(order);
-  const lastClientMessage = [...useMessages()]
-    .reverse()
-    .find((m) => m.clientCode === order.clientCode && m.from === "client");
-  const messagesHref = `${localePath(lang, routes.adminMessages)}?client=${order.clientCode}`;
 
   const at = (stage: keyof typeof order.history) => (order.history[stage] ? formatTime(order.history[stage]) : "—");
   const values = {
@@ -139,9 +135,6 @@ export default function StaffOrderView({
               {!isActiveOrder(order) && (
                 <ActionLink href={localePath(lang, routes.adminOrders)}>{t.returnToQueue}</ActionLink>
               )}
-              <ActionLink href={messagesHref} variant={isActiveOrder(order) ? "strong" : "secondary"}>
-                {fill(t.message, { client })}
-              </ActionLink>
               {mine && (order.stage === "new" || order.stage === "accepted") && (
                 <ActionButton
                   variant="danger"
@@ -191,17 +184,6 @@ export default function StaffOrderView({
             />
           </Panel>
 
-          <Panel
-            title={t.latestMessage.title}
-            subtitle={lastClientMessage && `${client} · ${order.clientCode} · ${formatTime(lastClientMessage.sentAt)}`}
-          >
-            <p className="text-[0.8125rem] leading-relaxed">
-              {lastClientMessage ? localize(lastClientMessage.text, lang) : t.latestMessage.none}
-            </p>
-            <ActionLink href={messagesHref} size="sm" className="mt-3">
-              {t.latestMessage.open}
-            </ActionLink>
-          </Panel>
         </div>
       </div>
       {toast}

@@ -19,13 +19,11 @@ export const routes = {
   accountOrders: "/account/orders",
   accountOrder: (id: string) => `/account/orders/${id}`,
   accountNotifications: "/account/notifications",
-  accountChat: "/account/chat",
 
   // Staff portal (roles: manager, superadmin — see lib/auth/roles.ts)
   admin: "/admin",
   adminOrders: "/admin/orders",
   adminOrder: (id: string) => `/admin/orders/${id}`,
-  adminMessages: "/admin/messages",
   adminContent: "/admin/content",
   adminManagers: "/admin/managers",
 } as const;

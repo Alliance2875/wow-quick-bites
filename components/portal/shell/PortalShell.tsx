@@ -16,7 +16,7 @@ import ShellFrame from "./ShellFrame";
 import ThemeRow from "./ThemeRow";
 
 /** Sidebar sections for each role (labels from the portal dictionary). */
-function navigation(lang: Locale, viewer: Viewer, dict: Dictionary["portal"], orderDetailHref?: string): NavSection[] {
+function navigation(lang: Locale, viewer: Viewer, dict: Dictionary["portal"]): NavSection[] {
   const href = (path: string) => localePath(lang, path);
   const nav = dict.nav;
 
@@ -28,7 +28,6 @@ function navigation(lang: Locale, viewer: Viewer, dict: Dictionary["portal"], or
           { href: href(routes.account), label: nav.dashboard, icon: "layoutGrid", exact: true },
           { href: href(routes.accountOrders), label: nav.myOrders, icon: "shoppingBag" },
           { href: href(routes.accountNotifications), label: nav.notifications, icon: "bell", badge: "clientNotifications" },
-          { href: href(routes.accountChat), label: nav.chat, icon: "messageCircle", badge: "clientChat" },
         ],
       },
     ];
@@ -38,8 +37,6 @@ function navigation(lang: Locale, viewer: Viewer, dict: Dictionary["portal"], or
     label: dict.sections.manager,
     items: [
       { href: href(routes.adminOrders), label: nav.orderQueue, exact: true },
-      ...(orderDetailHref ? [{ href: orderDetailHref, label: nav.orderDetail }] : []),
-      { href: href(routes.adminMessages), label: nav.messages, badge: "staffMessages" as const },
       // Managers see Menu & Ads only while a content grant is active
       ...(viewer.role === "manager" && viewer.contentGrant ? [{ href: href(routes.adminContent), label: nav.menuAds }] : []),
     ],
@@ -66,20 +63,17 @@ export default function PortalShell({
   lang,
   viewer,
   dict,
-  orderDetailHref,
   extraCrumbs = [],
   children,
 }: {
   lang: Locale;
   viewer: Viewer;
   dict: Dictionary["portal"];
-  /** Current order of the register ("Order detail" entry), staff only */
-  orderDetailHref?: string;
   /** Pages that are not in the sidebar (client order tracking…) */
   extraCrumbs?: Crumb[];
   children: React.ReactNode;
 }) {
-  const sections = navigation(lang, viewer, dict, orderDetailHref);
+  const sections = navigation(lang, viewer, dict);
   const crumbs: Crumb[] = [
     ...sections.flatMap((section) =>
       section.items

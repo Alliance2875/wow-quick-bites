@@ -1,11 +1,10 @@
-// Client area (/account): dashboard, orders, order tracking, notifications, chat.
+// Client area (/account): dashboard, orders, order tracking and notifications.
 export const clientArea = {
   meta: {
     dashboard: "My account",
     orders: "My orders",
     order: "Order {id}",
     notifications: "Notifications",
-    chat: "Chat with your manager",
   },
   crumbs: {
     orderTracking: "Order tracking",
@@ -41,7 +40,7 @@ export const clientArea = {
   },
   dashboard: {
     title: "Welcome back, {name}",
-    subtitle: "Your orders, updates and conversations — all in one place.",
+    subtitle: "Your orders and updates — all in one place.",
     viewMenu: "View menu",
     activeOrder: "Your active order",
     activeOrderMeta: "{id} · Placed {when} · {fulfilment}",
@@ -53,7 +52,7 @@ export const clientArea = {
     },
     identity: {
       title: "Your client identity",
-      note: "This code stays the same for every order and conversation with the manager.",
+      note: "This code stays the same for every order.",
     },
     notifications: {
       title: "Notifications",
@@ -64,18 +63,9 @@ export const clientArea = {
       viewAll: "View all notifications",
       empty: "No order updates yet.",
     },
-    message: {
-      title: "A message from {name}",
-      meta: "Manager · {when}",
-      unread: "{count} unread",
-      open: "Open conversation",
-      empty: "No messages yet. Ask the manager anything about your order.",
-      start: "Start a conversation",
-    },
     quick: {
       menu: { title: "Browse the menu", text: "Find your next WOW bite." },
       purchases: { title: "My purchases", text: "See receipts and reorder." },
-      chat: { title: "Chat with {name}", text: "Ask about your order." },
     },
   },
   orders: {
@@ -146,13 +136,6 @@ export const clientArea = {
       paid: "Total paid",
       notCharged: "Not charged",
     },
-    help: {
-      title: "Need help with this order?",
-      meta: "{manager} · Manager · Latest reply at {time}",
-      metaNone: "{manager} · Manager",
-      empty: "Send a message: your client code and this order ID are attached automatically.",
-      chat: "Chat with {manager}",
-    },
     identity: {
       title: "Client & order identity",
       note: "Your client code identifies you. The order ID identifies this purchase only.",
@@ -202,37 +185,6 @@ export const clientArea = {
       completed: { title: "Pickup confirmed — order completed", text: "{items} collected. {total} was paid on pickup." },
       cancelled: { title: "Your order was cancelled", text: "Your order was cancelled before preparation and was not charged." },
     },
-  },
-  chat: {
-    title: "Chat with your manager",
-    subtitle: "Your conversation with {manager} · {name} · Permanent client code {code}",
-    track: "Track {id}",
-    list: "Messages",
-    listMeta: "1 manager conversation",
-    business: "WOW Quick Bites · Manager",
-    unreadReplies: { one: "{count} unread reply", other: "{count} unread replies" },
-    noteTitle: "One code, one conversation",
-    note: "Your future orders stay connected to {code}. Always include the order ID when asking about a purchase.",
-    threadTitle: "{manager} · Manager",
-    threadMeta: "Conversation for {name} · {code}",
-    conversationDate: "{date} · Conversation",
-    youLine: "You · {name} · {code}",
-    managerLine: "{manager} · Manager",
-    sent: "Sent",
-    unreadTag: "Unread",
-    replyingTo: "Replying to {manager} · {code}",
-    placeholder: "Type a message to {manager}…",
-    attached: "Your client code stays attached",
-    send: "Send message",
-    empty: "No messages yet. Say hello — the manager replies here.",
-    linkedOrder: "Linked order",
-    linkedMeta: "Current purchase · {id}",
-    viewOrder: "View order detail",
-    history: "Same client, separate orders",
-    previous: "Previous purchase: {items} · {total}. Your permanent code is unchanged.",
-    noOrder: "No order yet. Your conversation will be linked to your next purchase.",
-    team: "the team",
-    options: "Conversation options",
   },
 };
 

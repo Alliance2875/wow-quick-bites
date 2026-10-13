@@ -40,7 +40,6 @@ export const order: OrderDict = {
     amountDue: "Montant dû",
   },
   track: "Suivre la commande {id}",
-  chat: "Ouvrir la discussion",
   notifications: "Notifications",
   myOrders: "Mes commandes",
   none: {

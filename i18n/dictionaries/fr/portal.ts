@@ -25,7 +25,6 @@ export const portal: PortalDict = {
     dashboard: "Tableau de bord",
     myOrders: "Mes commandes",
     notifications: "Notifications",
-    chat: "Discussion",
     overview: "Vue d’ensemble",
     menuAds: "Menu et publicités",
     managers: "Gestionnaires",
@@ -33,7 +32,6 @@ export const portal: PortalDict = {
     auditLog: "Journal d’audit",
     orderQueue: "File des commandes",
     orderDetail: "Détail de commande",
-    messages: "Messages",
   },
   shell: {
     viewStorefront: "Voir la vitrine",

@@ -8,13 +8,13 @@ import { DetailList, Panel } from "@/components/portal/ui/Panel";
 import StageTracker from "@/components/portal/ui/StageTracker";
 import { Badge, DotText } from "@/components/portal/ui/Status";
 import Icon from "@/components/shared/ui/Icon";
-import { localize, type Locale } from "@/i18n/config";
+import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import { addToCart } from "@/lib/cart/cart";
 import { fill, formatPrice, plural } from "@/lib/format";
 import { formatDate, formatTime } from "@/lib/portal/format";
 import { clientTrackerSteps, isActiveOrder, itemCount, orderLines, orderTotal } from "@/lib/portal/orders";
-import { useMessages, useOrders } from "@/lib/portal/store";
+import { useOrders } from "@/lib/portal/store";
 import { localePath, routes } from "@/lib/routes";
 import { managerName } from "./content";
 
@@ -35,11 +35,8 @@ export default function ClientOrderView({
   const router = useRouter();
   // The server page already checked that this order belongs to the client
   const order = useOrders().find((o) => o.id === orderId)!;
-  const manager = managerName(order, c.chat.team);
+  const manager = managerName(order, "WOW Quick Bites");
   const total = formatPrice(orderTotal(order));
-  const lastReply = [...useMessages()]
-    .reverse()
-    .find((m) => m.clientCode === viewer.clientCode && m.from === "manager");
 
   const at = (stage: keyof typeof order.history) => (order.history[stage] ? formatTime(order.history[stage]) : "—");
   const values = {
@@ -136,17 +133,6 @@ export default function ClientOrderView({
             </div>
           </Panel>
 
-          <Panel
-            title={t.help.title}
-            subtitle={
-              lastReply ? fill(t.help.meta, { manager, time: formatTime(lastReply.sentAt) }) : fill(t.help.metaNone, { manager })
-            }
-          >
-            <p className="text-[0.8125rem] leading-relaxed">{lastReply ? localize(lastReply.text, lang) : t.help.empty}</p>
-            <ActionLink href={localePath(lang, routes.accountChat)} className="mt-4">
-              {fill(t.help.chat, { manager })} <Icon name="arrowRight" className="h-4 w-4" />
-            </ActionLink>
-          </Panel>
         </div>
 
         <div className="min-w-0 space-y-5">

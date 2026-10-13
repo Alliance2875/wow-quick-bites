@@ -9,15 +9,15 @@ import { DetailList, Panel } from "@/components/portal/ui/Panel";
 import StageTracker from "@/components/portal/ui/StageTracker";
 import { StagePill } from "@/components/portal/ui/Status";
 import Icon, { type IconName } from "@/components/shared/ui/Icon";
-import { localize, type Locale } from "@/i18n/config";
+import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import { fill, formatPrice, plural } from "@/lib/format";
 import { daysAgo } from "@/lib/portal/clock";
 import { formatDate, formatRelative, formatTime } from "@/lib/portal/format";
 import { clientTrackerSteps, isActiveOrder, newestFirst, orderLines, orderTotal } from "@/lib/portal/orders";
-import { useMessages, useNotifications, useOrders } from "@/lib/portal/store";
+import { useNotifications, useOrders } from "@/lib/portal/store";
 import { localePath, routes } from "@/lib/routes";
-import { managerName, notificationContent } from "./content";
+import { notificationContent } from "./content";
 
 type Props = {
   lang: Locale;
@@ -34,17 +34,11 @@ export default function ClientDashboard({ lang, viewer, dict }: Props) {
     .filter((order) => order.clientCode === viewer.clientCode)
     .sort(newestFirst);
   const active = orders.find(isActiveOrder);
-  const latest = orders[0];
-  const manager = managerName(latest, t.chat.team);
 
   const notifications = useNotifications(viewer.clientCode);
   const unread = notifications.filter((n) => !n.read);
   const firstUnread = unread[0];
   const lastRead = notifications.find((n) => n.read);
-
-  const messages = useMessages().filter((m) => m.clientCode === viewer.clientCode);
-  const lastReply = [...messages].reverse().find((m) => m.from === "manager");
-  const unreadReplies = messages.filter((m) => m.from === "manager" && !m.readByClient).length;
 
   const timeLabels = { today: p.time.today.toLowerCase(), yesterday: p.time.yesterday.toLowerCase() };
   const when = (iso: string) =>
@@ -53,12 +47,6 @@ export default function ClientDashboard({ lang, viewer, dict }: Props) {
   const quickLinks: { icon: IconName; title: string; text: string; href: string }[] = [
     { icon: "utensils", ...t.dashboard.quick.menu, href: href(routes.menu) },
     { icon: "receipt", ...t.dashboard.quick.purchases, href: href(routes.accountOrders) },
-    {
-      icon: "messageCircle",
-      title: fill(t.dashboard.quick.chat.title, { name: manager }),
-      text: t.dashboard.quick.chat.text,
-      href: href(routes.accountChat),
-    },
   ];
 
   return (
@@ -86,7 +74,7 @@ export default function ClientDashboard({ lang, viewer, dict }: Props) {
             </Panel>
           )}
 
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             {quickLinks.map((link) => (
               <Link
                 key={link.href}
@@ -147,24 +135,6 @@ export default function ClientDashboard({ lang, viewer, dict }: Props) {
             </ActionLink>
           </Panel>
 
-          <Panel
-            title={fill(t.dashboard.message.title, { name: manager })}
-            subtitle={
-              lastReply
-                ? [
-                    fill(t.dashboard.message.meta, { when: when(lastReply.sentAt) }),
-                    unreadReplies ? fill(t.dashboard.message.unread, { count: unreadReplies }) : null,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")
-                : undefined
-            }
-          >
-            <p className="text-[0.8125rem] leading-relaxed">{lastReply ? localize(lastReply.text, lang) : t.dashboard.message.empty}</p>
-            <ActionLink href={href(routes.accountChat)} className="mt-4">
-              {lastReply ? t.dashboard.message.open : t.dashboard.message.start} <Icon name="arrowRight" className="h-4 w-4" />
-            </ActionLink>
-          </Panel>
         </div>
       </div>
     </div>

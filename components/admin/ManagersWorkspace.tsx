@@ -341,15 +341,13 @@ function ManagerEditor({
           <>
             <div className="space-y-4">
               <Eyebrow className="text-foreground">{t.defaults}</Eyebrow>
-              {[t.process, t.reply].map((row) =>
-                permissionRow(
-                  row.title,
-                  row.text,
-                  <span className="flex items-center gap-3">
-                    <span className="text-[0.6875rem] text-muted-foreground">{t.defaultTag}</span>
-                    <Toggle checked onChange={() => {}} label={row.title} labels={p.common} disabled />
-                  </span>,
-                ),
+              {permissionRow(
+                t.process.title,
+                t.process.text,
+                <span className="flex items-center gap-3">
+                  <span className="text-[0.6875rem] text-muted-foreground">{t.defaultTag}</span>
+                  <Toggle checked onChange={() => {}} label={t.process.title} labels={p.common} disabled />
+                </span>,
               )}
             </div>
 

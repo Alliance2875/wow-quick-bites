@@ -9,13 +9,12 @@ export type Role = (typeof roles)[number];
 export const isRole = (value: unknown): value is Role => roles.includes(value as Role);
 
 /**
- * What a signed-in person may do. Managers get orders + chat by default; content rights only come
+ * What a signed-in person may do. Managers get orders by default; content rights only come
  * from an explicit, time-limited grant by the superadmin (see data/staff.ts → contentGrant).
  */
 export type Permission =
   | "overview:view"
   | "orders:process"
-  | "messages:reply"
   | "menu:edit"
   | "labels:edit"
   | "ads:manage"
@@ -25,11 +24,10 @@ export type Permission =
 
 export const rolePermissions: Record<Role, readonly Permission[]> = {
   client: [],
-  manager: ["orders:process", "messages:reply"],
+  manager: ["orders:process"],
   superadmin: [
     "overview:view",
     "orders:process",
-    "messages:reply",
     "menu:edit",
     "labels:edit",
     "ads:manage",

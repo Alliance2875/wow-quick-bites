@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ActionLink } from "@/components/portal/ui/Action";
 import { SearchInput } from "@/components/portal/ui/Controls";
 import Note from "@/components/portal/ui/Note";
 import PageHeader from "@/components/portal/ui/PageHeader";
@@ -78,7 +77,6 @@ export default function OrderQueue({
       <PageHeader
         title={t.title}
         subtitle={viewer.role === "manager" ? fill(t.subtitle, { name: viewer.name }) : t.subtitleAdmin}
-        action={<ActionLink href={localePath(lang, routes.adminMessages)}>{t.viewMessages}</ActionLink>}
       />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6 xl:gap-4">

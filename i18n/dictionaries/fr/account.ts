@@ -42,7 +42,7 @@ export const account: AccountDict = {
     breadcrumbSignIn: "Connexion",
     breadcrumb: "Récupération du mot de passe",
     title: "Retrouvez votre compte WOW",
-    subtitle: "Récupérez votre mot de passe pour retrouver vos commandes, leur suivi et vos discussions.",
+    subtitle: "Récupérez votre mot de passe pour retrouver vos commandes et leur suivi.",
     heroTitle: "Cuisine fraîche. Saveurs uniques.",
     heroTagline: "WOW Quick Bites par Rwasibo",
     request: {

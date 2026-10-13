@@ -25,7 +25,7 @@ Open questions are marked **❓** — please answer them in the PR / issue that 
 | Errors | See §11. |
 
 **Client code vs order ID** — a client code (`WQB001A`) is permanent and identifies a *person* across all
-purchases; an order ID (`ORD-1042`) identifies *one purchase*. The UI groups orders and chat by client code.
+purchases; an order ID (`ORD-1042`) identifies *one purchase*. The UI groups orders by client code.
 
 ### Shared types
 
@@ -85,7 +85,7 @@ type SessionUser = {
   contentGrant?: ContentGrant;        // managers with an active grant
 };
 type Permission =
-  | "overview:view" | "orders:process" | "messages:reply"
+  | "overview:view" | "orders:process"
   | "menu:edit" | "labels:edit" | "ads:manage" | "content:publish"
   | "managers:manage" | "business:edit";
 ```
@@ -113,16 +113,14 @@ Button exists (`components/account/AuthCard.tsx`). ❓ OAuth flow and callback U
 |---|---|---|---|---|
 | Store overview | ✓ | – | – | – |
 | Process orders (accept → complete) | all orders | **assigned** orders | assigned orders | – |
-| Reply to client messages | all clients | assigned clients | assigned clients | own conversation |
 | Edit menu items (`menu:edit`) | ✓ | – | if scope `food`/`drinks` | – |
 | NEW labels (`labels:edit`) | ✓ | – | if scope `labels` | – |
 | Ads (`ads:manage`) | ✓ | – | if scope `ads` | – |
 | Publish content (`content:publish`) | ✓ | – | if scope `publish` | – |
 | Managers, grants, business settings | ✓ | – | **never** | – |
-| Own orders, notifications, chat | – | – | – | ✓ |
+| Own orders and notifications | – | – | – | ✓ |
 
-A manager's "assigned" orders/clients = orders whose `managerId` is that manager; a conversation belongs to the
-manager of the client's latest order. Grants are never delegable by a manager.
+A manager's "assigned" orders = orders whose `managerId` is that manager. Grants are never delegable by a manager.
 
 ---
 
@@ -271,46 +269,15 @@ new | accepted → cancelled
 - `403 not_assigned` when a manager acts on another manager's order.
 
 ### Live updates
-❓ The queue, client tracking and chat should update without reload. Proposal: Server-Sent Events
-`GET /events` (per session) emitting `order.updated`, `message.created`, `notification.created`. WebSocket is fine too.
+❓ The queue and client tracking should update without reload. Proposal: Server-Sent Events
+`GET /events` (per session) emitting `order.updated`, `notification.created`. WebSocket is fine too.
 
 ---
 
-## 7. Messages (one conversation per client code)
+## 7. Messaging
 
-Replaces: `data/messages.ts`, `lib/portal/store.ts` (`useMessages`, `sendMessage`, `markConversationRead`).
-
-```ts
-type ChatMessage = {
-  id: string;
-  clientCode: string;
-  from: "client" | "manager";
-  authorId?: string;          // staff id when from = manager
-  orderId?: string;           // order the message is about
-  text: string;               // plain text as typed (not Localized)
-  sentAt: string;
-  readByClient: boolean;
-  readByManager: boolean;
-};
-```
-> The mock stores sample text as `Localized`; real messages are plain strings.
-
-### Client
-| Endpoint | Response |
-|---|---|
-| `GET /me/conversation` | `{ manager: { id, name } \| null, messages: ChatMessage[] }` |
-| `POST /me/conversation/messages` `{ text, orderId? }` | `201 ChatMessage` |
-| `POST /me/conversation/read` | `204` — marks manager messages read |
-
-### Staff
-| Endpoint | Response |
-|---|---|
-| `GET /conversations?q=` | `{ clientCode, clientName, managerId, lastMessage, unread, latestOrder }[]` (assigned only for managers) |
-| `GET /conversations/{clientCode}` | `ChatMessage[]` oldest first |
-| `POST /conversations/{clientCode}/messages` `{ text, orderId? }` | `201 ChatMessage` |
-| `POST /conversations/{clientCode}/read` | `204` |
-
-Text limit ❓ (proposal: 1–2,000 characters).
+Chat and internal messaging are not part of the current frontend scope. No client or staff messaging
+endpoints are required for the portal.
 
 ---
 
@@ -453,7 +420,7 @@ type AuditEvent = {
 | 404 | not found **or not yours** | `not_found` |
 | 409 | state conflict | `invalid_transition`, `email_taken`, `item_unavailable` |
 | 422 | validation | `validation_failed` + `details: { field: "reason" }` |
-| 429 | rate limit (sign-in, sign-up, messages) | `too_many_attempts` |
+| 429 | rate limit (sign-in, sign-up) | `too_many_attempts` |
 
 The UI translates `code` (EN/FR), so codes must be stable; `message` is not shown to users.
 
@@ -477,7 +444,6 @@ The UI translates `code` (EN/FR), so codes must be stable; `message` is not show
 | `data/menu.ts`, `categories.ts`, `product-options.ts`, `tags.ts`, `promotions.ts`, `contact.ts`, `site.ts` | §4 |
 | `lib/cart/cart.ts`, `lib/orders.ts` | §5 |
 | `data/orders.ts`, `lib/portal/store.ts` (orders) | §6 |
-| `data/messages.ts`, `lib/portal/store.ts` (messages) | §7 |
 | `data/notifications.ts`, `lib/portal/store.ts` (notifications) | §8 |
 | `lib/portal/content-store.ts`, `data/campaigns.ts`, `data/business.ts` | §9 |
 | `data/staff.ts`, `data/audit.ts`, `lib/portal/staff-store.ts` | §10 |
