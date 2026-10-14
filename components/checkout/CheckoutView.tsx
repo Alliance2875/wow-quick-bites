@@ -13,7 +13,9 @@ import Icon from "@/components/shared/ui/Icon";
 import { fulfilmentOptions, paymentMethods, type FulfilmentId, type PaymentMethodId } from "@/data/checkout";
 import { localize, type Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
-import { useSession } from "@/lib/auth/session";
+import { updateSession, useSession } from "@/lib/auth/session";
+import { rememberGuest, useGuest } from "@/lib/guest";
+import { normalizePhone } from "@/lib/phone";
 import { clearCart, useCart } from "@/lib/cart/cart";
 import { summarize } from "@/lib/cart/pricing";
 import { useHydrated } from "@/lib/create-store";
@@ -28,21 +30,34 @@ const card = "rounded-3xl border border-border bg-card p-6 sm:p-7";
 /** Only the dictionary parts this client component needs (keeps the page payload small). */
 type CheckoutDicts = Pick<Dictionary, "common" | "cart" | "checkout">;
 
+/** Who places the order: a signed-in client, or a guest (name and phone only, typed at checkout). */
+type Customer =
+  | { kind: "account"; name: string; email: string; phone?: string; clientCode: string }
+  | { kind: "guest"; name?: string; phone?: string };
+
 export default function CheckoutView({ lang, dict }: { lang: Locale; dict: CheckoutDicts }) {
   const hydrated = useHydrated();
   const user = useSession();
+  const guest = useGuest();
   const lines = useCart();
   const router = useRouter();
   // Set once the order is placed: avoids flashing "empty cart" while navigating to the confirmation
   const [placed, setPlaced] = useState(false);
+  // Signed-out visitors choose: sign in, or continue as a guest on this same page
+  const [asGuest, setAsGuest] = useState(false);
   const href = (path: string) => localePath(lang, path);
+  const signInHref = `${href(routes.signIn)}?next=${encodeURIComponent(href(routes.checkout))}`;
 
   if (!hydrated || placed) return <div className="min-h-[60vh]" />;
 
-  if (!user) {
-    const next = encodeURIComponent(href(routes.checkout));
-    return <SignInGate href={`${href(routes.signIn)}?next=${next}`} dict={dict.checkout.gate} />;
+  if (!user && !asGuest) {
+    return <SignInGate href={signInHref} dict={dict.checkout.gate} onGuest={() => setAsGuest(true)} />;
   }
+
+  // A returning guest finds the name and phone of the last order prefilled
+  const customer: Customer = user
+    ? { kind: "account", name: user.name, email: user.email, phone: user.phone, clientCode: user.clientCode }
+    : { kind: "guest", ...guest };
 
   if (!lines.length) {
     return (
@@ -58,10 +73,12 @@ export default function CheckoutView({ lang, dict }: { lang: Locale; dict: Check
   return (
     <CheckoutForm
       // Remount if another account signs in, so the contact fields are prefilled again
-      key={user.email}
+      key={customer.kind === "account" ? customer.email : "guest"}
       lang={lang}
       dict={dict}
-      user={user}
+      customer={customer}
+      signInHref={signInHref}
+      signUpHref={href(routes.signUp)}
       lines={lines}
       onPlaced={() => {
         setPlaced(true);
@@ -75,13 +92,17 @@ export default function CheckoutView({ lang, dict }: { lang: Locale; dict: Check
 function CheckoutForm({
   lang,
   dict,
-  user,
+  customer,
+  signInHref,
+  signUpHref,
   lines,
   onPlaced,
 }: {
   lang: Locale;
   dict: CheckoutDicts;
-  user: NonNullable<ReturnType<typeof useSession>>;
+  customer: Customer;
+  signInHref: string;
+  signUpHref: string;
   lines: ReturnType<typeof useCart>;
   onPlaced: () => void;
 }) {
@@ -108,11 +129,20 @@ function CheckoutForm({
       setError(t.required);
       return;
     }
+    const phone = normalizePhone(value("phone"));
+    if (!phone) {
+      setError(t.invalidPhone);
+      return;
+    }
+    if (customer.kind === "guest") rememberGuest({ name: value("name"), phone });
+    // Accounts created with Google have no phone yet: keep the one typed here for next time
+    else if (!customer.phone) updateSession({ phone });
     placeOrder({
       clientName: value("name"),
-      clientCode: user.clientCode,
-      phone: value("phone"),
-      email: value("email") || undefined,
+      clientCode: customer.kind === "account" ? customer.clientCode : "",
+      guest: customer.kind === "guest" || undefined,
+      phone,
+      email: (customer.kind === "account" && value("email")) || undefined,
       fulfilment,
       address: fulfilment === "delivery" ? value("address") : undefined,
       payment,
@@ -137,42 +167,61 @@ function CheckoutForm({
 
       <form onSubmit={submit} className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_29.375rem]">
         <div className="space-y-6">
-          <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-soft p-6">
-            <div>
-              <p className="text-[0.6875rem] font-bold uppercase text-muted-foreground">{t.account.kicker}</p>
-              <p className="mt-1 text-xl font-bold">
-                {user.name} · {t.account.role}
+          {customer.kind === "account" ? (
+            <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-soft p-6">
+              <div>
+                <p className="text-[0.6875rem] font-bold uppercase text-muted-foreground">{t.account.kicker}</p>
+                <p className="mt-1 text-xl font-bold">
+                  {customer.name} · {t.account.role}
+                </p>
+              </div>
+              <div className="sm:text-right">
+                <p className="text-[0.6875rem] font-bold uppercase text-muted-foreground">{t.account.codeKicker}</p>
+                <p className="text-2xl font-bold text-accent">{customer.clientCode}</p>
+                <p className="text-[0.6875rem] text-muted-foreground">{t.account.codeHelp}</p>
+              </div>
+            </section>
+          ) : (
+            <section className="rounded-2xl bg-soft p-6">
+              <p className="text-[0.6875rem] font-bold uppercase text-muted-foreground">{t.guest.kicker}</p>
+              <p className="mt-1 text-xl font-bold">{t.guest.role}</p>
+              <p className="mt-2 text-sm text-muted-foreground">{t.guest.text}</p>
+              <p className="mt-4 flex flex-wrap gap-x-4 gap-y-1 border-t border-border pt-4 text-xs">
+                <Link href={signInHref} className="font-semibold text-accent hover:underline">
+                  {t.guest.signIn}
+                </Link>
+                <Link href={signUpHref} className="font-semibold text-accent hover:underline">
+                  {t.guest.createAccount}
+                </Link>
               </p>
-            </div>
-            <div className="sm:text-right">
-              <p className="text-[0.6875rem] font-bold uppercase text-muted-foreground">{t.account.codeKicker}</p>
-              <p className="text-2xl font-bold text-accent">{user.clientCode}</p>
-              <p className="text-[0.6875rem] text-muted-foreground">{t.account.codeHelp}</p>
-            </div>
-          </section>
+            </section>
+          )}
 
           <section className={card}>
             <h2 className="text-xl">{t.contact.title}</h2>
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              <TextField label={t.contact.fullName} name="name" defaultValue={user.name} autoComplete="name" required />
+              <TextField label={t.contact.fullName} name="name" defaultValue={customer.name} autoComplete="name" required />
               <TextField
                 label={t.contact.phone}
                 name="phone"
                 type="tel"
-                defaultValue={user.phone}
+                defaultValue={customer.phone}
                 placeholder={t.contact.phonePlaceholder}
                 autoComplete="tel"
                 required
               />
-              <TextField
-                label={t.contact.email}
-                name="email"
-                type="email"
-                defaultValue={user.email}
-                placeholder={t.contact.emailPlaceholder}
-                autoComplete="email"
-                className="sm:col-span-2"
-              />
+              {/* Guests: name and phone only */}
+              {customer.kind === "account" && (
+                <TextField
+                  label={t.contact.email}
+                  name="email"
+                  type="email"
+                  defaultValue={customer.email}
+                  placeholder={t.contact.emailPlaceholder}
+                  autoComplete="email"
+                  className="sm:col-span-2"
+                />
+              )}
             </div>
           </section>
 

@@ -6,6 +6,16 @@ export const checkout = {
     title: "Sign in to check out",
     text: "Your cart is saved. Sign in or create an account to place your order.",
     signIn: "Sign in",
+    or: "or",
+    guest: "Continue without signing in",
+    guestNote: "No account needed: just your name and phone number.",
+  },
+  guest: {
+    kicker: "GUEST ORDER",
+    role: "Continue without an account",
+    text: "Just add your name and phone number below. The manager calls this number if needed about your order.",
+    signIn: "Have an account? Sign in",
+    createAccount: "Create an account for a permanent client code",
   },
   account: {
     kicker: "SIGNED-IN ACCOUNT",
@@ -49,6 +59,7 @@ export const checkout = {
     backToCart: "Back to cart",
   },
   required: "Please fill in your name and phone number.",
+  invalidPhone: "Enter a valid Rwandan mobile number (07X XXX XXXX).",
 };
 
 export type CheckoutDict = typeof checkout;

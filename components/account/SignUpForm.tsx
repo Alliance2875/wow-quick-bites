@@ -2,34 +2,37 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useActionState } from "react";
 import { Button } from "@/components/shared/ui/Button";
 import { TextField } from "@/components/shared/ui/Field";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
-import { signUp } from "@/lib/auth/session";
+import { signUpAction, type AuthFormState } from "@/lib/auth/actions";
 import { localePath, routes } from "@/lib/routes";
 import AuthCard from "./AuthCard";
+import AuthError from "./AuthError";
 import PasswordField from "./PasswordField";
 import { safeNext } from "./safe-next";
 
 export default function SignUpForm({ lang, dict }: { lang: Locale; dict: Dictionary["account"] }) {
   const router = useRouter();
-  const next = safeNext(useSearchParams().get("next"), localePath(lang, routes.home));
+  const next = safeNext(useSearchParams().get("next"), "");
 
-  const submit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    signUp({
-      name: String(form.get("name")).trim(),
-      phone: String(form.get("phone")).trim(),
-      email: String(form.get("email")).trim(),
-    });
-    router.push(next);
-  };
+  const [state, action, pending] = useActionState(async (previous: AuthFormState, form: FormData) => {
+    const result = await signUpAction(previous, form);
+    // The account is created once the emailed code is verified (next page)
+    if (result && "verify" in result) {
+      router.push(result.verify);
+      router.refresh();
+    }
+    return result;
+  }, undefined);
 
   return (
-    <AuthCard title={dict.signUp.title} subtitle={dict.signUp.subtitle} dict={dict}>
-      <form onSubmit={submit} className="space-y-5">
+    <AuthCard title={dict.signUp.title} subtitle={dict.signUp.subtitle} dict={dict} lang={lang} next={next}>
+      <form action={action} className="space-y-5">
+        <input type="hidden" name="lang" value={lang} />
+        <input type="hidden" name="next" value={next} />
         <TextField label={dict.fields.fullName} name="name" autoComplete="name" required />
         <TextField
           label={dict.fields.phone}
@@ -48,12 +51,13 @@ export default function SignUpForm({ lang, dict }: { lang: Locale; dict: Diction
           required
           labels={{ show: dict.fields.showPassword, hide: dict.fields.hidePassword }}
         />
-        <Button type="submit" block size="lg">
-          {dict.signUp.submit}
+        {state && "error" in state && <AuthError message={dict.errors[state.error]} />}
+        <Button type="submit" block size="lg" disabled={pending || Boolean(state && "verify" in state)}>
+          {pending || (state && "verify" in state) ? dict.signUp.pending : dict.signUp.submit}
         </Button>
       </form>
       <Link
-        href={`${localePath(lang, routes.signIn)}?next=${encodeURIComponent(next)}`}
+        href={next ? `${localePath(lang, routes.signIn)}?next=${encodeURIComponent(next)}` : localePath(lang, routes.signIn)}
         className="mt-6 block text-center text-sm font-semibold text-accent hover:underline"
       >
         {dict.signUp.switch}

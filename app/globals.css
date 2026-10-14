@@ -26,6 +26,12 @@
   --overlay: rgb(0 0 0 / 0.6);
   --danger: #c62828;
   --shadow-glow: 0 10px 30px -12px rgb(120 96 13 / 0.35);
+  /* Client area + staff portal (admin designs) */
+  --panel: #ffffff; /* cards, sidebar, top bar */
+  --panel-muted: #f0f0ea; /* table headers, pills, secondary chips */
+  --field: #f5f5f1; /* inputs, drop zones */
+  --success: #287047; /* Ready, Completed, Active, On duty */
+  --critical: #b54d41; /* Cancelled, Suspended, Revoke */
 }
 
 [data-theme="dark"] {
@@ -47,6 +53,11 @@
   --overlay: rgb(0 0 0 / 0.7);
   --danger: #ef5350;
   --shadow-glow: 0 10px 40px -10px rgb(232 185 35 / 0.45);
+  --panel: #191813;
+  --panel-muted: #23211b;
+  --field: #0b0a07;
+  --success: #9bc6aa;
+  --critical: #e9a39a;
 }
 
 /* `dark:` follows the data-theme attribute, not the OS setting */
@@ -71,6 +82,11 @@
   --color-overlay: var(--overlay);
   --color-danger: var(--danger);
   --shadow-glow: var(--shadow-glow);
+  --color-panel: var(--panel);
+  --color-panel-muted: var(--panel-muted);
+  --color-field: var(--field);
+  --color-success: var(--success);
+  --color-critical: var(--critical);
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   /* Ultra-wide screens only: beyond this the page stops growing and stays centred */
   --container-page: 120rem;
@@ -112,6 +128,17 @@
   }
 }
 
+/*
+ * Client area + staff portal: the admin designs are drawn at 1440px with a 16px base and a fixed
+ * sidebar, so the portal does not use the storefront's proportional scaling: it stays at 16px
+ * (slightly smaller on 1280–1440px laptops so the three-column layouts still fit).
+ */
+@media (min-width: 80rem) {
+  html:has([data-portal]) {
+    font-size: clamp(14px, 100vw / 90, 16px);
+  }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
@@ -123,6 +150,12 @@ h2,
 h3 {
   font-weight: 800;
   letter-spacing: -0.02em;
+}
+
+/* Portal headings are lighter than the storefront's (admin designs) */
+[data-portal] :is(h1, h2, h3) {
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 /* Mobile menu built on <details>: hide the default marker */
