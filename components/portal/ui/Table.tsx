@@ -27,14 +27,28 @@ export function Th({ children, className }: { children?: React.ReactNode; classN
   );
 }
 
-export function Tr({ children, highlight, className }: { children: React.ReactNode; highlight?: boolean; className?: string }) {
+export function Tr({
+  children,
+  highlight,
+  selected,
+  className,
+  onClick,
+}: {
+  children: React.ReactNode;
+  highlight?: boolean;
+  selected?: boolean;
+  className?: string;
+  onClick?: React.MouseEventHandler<HTMLTableRowElement>;
+}) {
   return (
     <tr
       className={cn(
         "border-t border-border transition-colors",
         highlight ? "bg-soft" : "hover:bg-panel-muted/50",
+        selected && "bg-primary/25 hover:bg-primary/25",
         className,
       )}
+      onClick={onClick}
     >
       {children}
     </tr>

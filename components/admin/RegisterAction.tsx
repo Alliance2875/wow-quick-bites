@@ -22,6 +22,7 @@ export default function RegisterAction({
   dict,
   onDone,
   block,
+  hideDetail = false,
   size = "md",
 }: {
   order: PortalOrder;
@@ -30,6 +31,7 @@ export default function RegisterAction({
   dict: Pick<Dictionary, "portal" | "staff">;
   onDone?: (message: string) => void;
   block?: boolean;
+  hideDetail?: boolean;
   size?: "sm" | "md";
 }) {
   const t = dict.staff.actions;
@@ -37,6 +39,7 @@ export default function RegisterAction({
   const detail = localePath(lang, routes.adminOrder(order.id));
 
   if (!next || !canAct(viewer, order)) {
+    if (hideDetail) return null;
     return (
       <ActionLink href={detail} block={block} size={size}>
         {order.stage === "completed" ? t.completedView : t.view}

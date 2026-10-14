@@ -26,11 +26,13 @@ export default function StaffOrderView({
   orderId,
   viewer,
   dict,
+  fromQueue = false,
 }: {
   lang: Locale;
   orderId: string;
   viewer: StaffViewer;
   dict: Pick<Dictionary, "portal" | "staff">;
+  fromQueue?: boolean;
 }) {
   const t = dict.staff.order;
   const p = dict.portal;
@@ -61,7 +63,9 @@ export default function StaffOrderView({
         title={fill(t.title, { id: order.id })}
         subtitle={fill(t.subtitle, { client, code: order.clientCode, fulfilment: p.fulfilment[order.fulfilment], manager })}
         action={
-          <ActionLink href={localePath(lang, routes.adminOrders)}>
+          <ActionLink
+            href={`${localePath(lang, routes.adminOrders)}${fromQueue ? `?selected=${encodeURIComponent(order.id)}` : ""}`}
+          >
             <Icon name="arrowLeft" className="h-4 w-4" /> {t.back}
           </ActionLink>
         }

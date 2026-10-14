@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SearchInput } from "@/components/portal/ui/Controls";
 import Note from "@/components/portal/ui/Note";
 import PageHeader from "@/components/portal/ui/PageHeader";
@@ -38,10 +38,12 @@ export default function OrderQueue({
   lang,
   viewer,
   dict,
+  selectedOrderId,
 }: {
   lang: Locale;
   viewer: StaffViewer;
   dict: Pick<Dictionary, "portal" | "staff">;
+  selectedOrderId?: string;
 }) {
   const t = dict.staff.queue;
   const p = dict.portal;
@@ -50,6 +52,9 @@ export default function OrderQueue({
   const [mine, setMine] = useState(false);
   const [grouped, setGrouped] = useState(true);
   const [query, setQuery] = useState("");
+  const [activeOrderId, setActiveOrderId] = useState(selectedOrderId);
+
+  useEffect(() => setActiveOrderId(selectedOrderId), [selectedOrderId]);
 
   const all = useOrders().filter(inQueueWindow);
   const counts = countByStage(all);
@@ -154,7 +159,7 @@ export default function OrderQueue({
             <Th>{t.columns.stage}</Th>
             <Th>{t.columns.total}</Th>
             <Th>{t.columns.assigned}</Th>
-            <Th className="w-44">{t.columns.next}</Th>
+            <Th className="w-52">{t.columns.next}</Th>
           </THead>
           <tbody>
             {shown.map((order) => {
@@ -164,7 +169,16 @@ export default function OrderQueue({
               const isLatest = siblings[0]?.id === order.id || !grouped;
               const actionable = canAct(viewer, order) && isActiveOrder(order);
               return (
-                <Tr key={order.id} highlight={actionable && order.stage === "preparing"}>
+                <Tr
+                  key={order.id}
+                  highlight={actionable && order.stage === "preparing"}
+                  selected={activeOrderId === order.id}
+                  className="cursor-pointer"
+                  onClick={(event) => {
+                    if (event.target instanceof Element && event.target.closest("a, button")) return;
+                    setActiveOrderId(order.id);
+                  }}
+                >
                   <Td>
                     <p className={cn("font-semibold", repeat && grouped && "text-accent")}>{order.clientCode}</p>
                     <p className="mt-0.5 whitespace-nowrap text-[0.6875rem] text-muted-foreground">
@@ -176,7 +190,11 @@ export default function OrderQueue({
                     </p>
                   </Td>
                   <Td>
-                    <Link href={localePath(lang, routes.adminOrder(order.id))} className="font-semibold hover:underline">
+                    <Link
+                      href={`${localePath(lang, routes.adminOrder(order.id))}?fromQueue=1`}
+                      onClick={() => setActiveOrderId(order.id)}
+                      className="font-semibold hover:underline"
+                    >
                       {order.id}
                     </Link>
                     <p className="mt-0.5 text-[0.6875rem] text-muted-foreground">{placedLabel(order.placedAt)}</p>
@@ -199,7 +217,26 @@ export default function OrderQueue({
                   <Td className="tabular-nums">{formatAmount(orderTotal(order))}</Td>
                   <Td>{getStaff(order.managerId)?.name}</Td>
                   <Td>
-                    <RegisterAction order={order} viewer={viewer} lang={lang} dict={dict} onDone={show} block size="sm" />
+                    <div className="flex items-center gap-2">
+                      <RegisterAction
+                        order={order}
+                        viewer={viewer}
+                        lang={lang}
+                        dict={dict}
+                        onDone={show}
+                        hideDetail
+                        size="sm"
+                      />
+                      <Link
+                        href={`${localePath(lang, routes.adminOrder(order.id))}?fromQueue=1`}
+                        onClick={() => setActiveOrderId(order.id)}
+                        aria-label={dict.staff.actions.view}
+                        title={dict.staff.actions.view}
+                        className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-border bg-panel text-foreground transition hover:border-primary hover:bg-primary hover:text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                      >
+                        <Icon name="eye" className="h-4 w-4" />
+                      </Link>
+                    </div>
                   </Td>
                 </Tr>
               );

@@ -9,8 +9,9 @@ export async function generateMetadata({ params }: PageProps<"/[lang]/admin/orde
   return { title: dict.staff.meta.queue };
 }
 
-export default async function OrderQueuePage({ params }: PageProps<"/[lang]/admin/orders">) {
+export default async function OrderQueuePage({ params, searchParams }: PageProps<"/[lang]/admin/orders">) {
   const { lang, dict } = await resolveLang(params);
+  const { selected } = await searchParams;
   const viewer = await requireViewer(lang, routes.adminOrders, {
     roles: ["manager", "superadmin"],
     anyPermission: ["orders:process"],
@@ -21,6 +22,7 @@ export default async function OrderQueuePage({ params }: PageProps<"/[lang]/admi
       lang={lang}
       viewer={{ id: viewer.id, role: viewer.role as "manager" | "superadmin", name: viewer.name }}
       dict={{ portal: dict.portal, staff: dict.staff }}
+      selectedOrderId={typeof selected === "string" ? selected : undefined}
     />
   );
 }
