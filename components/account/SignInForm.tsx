@@ -18,7 +18,10 @@ import { safeNext } from "./safe-next";
 export default function SignInForm({ lang, dict }: { lang: Locale; dict: Dictionary["account"] }) {
   const router = useRouter();
   // ?next=/en/checkout brings the user back to checkout after signing in
-  const next = safeNext(useSearchParams().get("next"), "");
+  const params = useSearchParams();
+  const next = safeNext(params.get("next"), "");
+  // Set by the Google callback when sign-in with Google did not complete
+  const googleFailed = params.get("error") === "google";
   const passwordLabels = { show: dict.fields.showPassword, hide: dict.fields.hidePassword };
 
   // The Server Action checks the credentials and sets the HttpOnly session cookie;
@@ -37,7 +40,12 @@ export default function SignInForm({ lang, dict }: { lang: Locale; dict: Diction
     next ? `${localePath(lang, path)}?next=${encodeURIComponent(next)}` : localePath(lang, path);
 
   return (
-    <AuthCard title={dict.signIn.title} subtitle={dict.signIn.subtitle} dict={dict}>
+    <AuthCard title={dict.signIn.title} subtitle={dict.signIn.subtitle} dict={dict} lang={lang} next={next}>
+      {googleFailed && !state && (
+        <div className="mb-5">
+          <AuthError message={dict.googleError} />
+        </div>
+      )}
       <form action={action} className="space-y-5">
         <input type="hidden" name="lang" value={lang} />
         <input type="hidden" name="next" value={next} />

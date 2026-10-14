@@ -16,6 +16,7 @@ export default async function AccountLayout({ children, params }: LayoutProps<"/
       lang={lang}
       viewer={viewer}
       dict={dict.portal}
+      common={dict.common}
       extraCrumbs={[
         {
           href: localePath(lang, routes.accountOrders),

@@ -25,3 +25,7 @@ export const useSession = store.useValue;
 export const rememberSession = (user: User) => store.set(user);
 
 export const forgetSession = () => store.set(null);
+
+/** Updates the display copy (profile edits, phone typed at checkout). */
+export const updateSession = (patch: Partial<Pick<User, "name" | "phone">>) =>
+  store.set((user) => (user ? { ...user, ...patch } : user));

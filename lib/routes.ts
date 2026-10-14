@@ -13,9 +13,16 @@ export const routes = {
   signIn: "/sign-in",
   signUp: "/sign-up",
   forgotPassword: "/forgot-password",
+  /** One-time code sent by email after "Create account" */
+  verifyEmail: "/verify-email",
+  /** After the Google callback: copies the public profile for the storefront, then continues */
+  finishSignIn: "/finish-sign-in",
+  /** Route Handler (no locale prefix): starts the Google OAuth flow */
+  googleSignIn: "/api/auth/google",
 
   // Client area (role: client)
   account: "/account",
+  accountProfile: "/account/profile",
   accountOrders: "/account/orders",
   accountOrder: (id: string) => `/account/orders/${id}`,
   accountNotifications: "/account/notifications",

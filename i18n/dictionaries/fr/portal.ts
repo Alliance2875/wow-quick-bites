@@ -25,6 +25,7 @@ export const portal: PortalDict = {
     dashboard: "Tableau de bord",
     myOrders: "Mes commandes",
     notifications: "Notifications",
+    profile: "Profil",
     overview: "Vue d’ensemble",
     menuAds: "Menu et publicités",
     managers: "Gestionnaires",
@@ -116,5 +117,8 @@ export const portal: PortalDict = {
     orders: { one: "{count} commande", other: "{count} commandes" },
     unreadBadge: "{count} non lu(s)",
     you: "Vous",
+    phone: "Téléphone",
+    guest: "Invité",
+    guestOrder: "Invité · sans compte",
   },
 };

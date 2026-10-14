@@ -52,17 +52,30 @@ export default function OrderConfirmation({ lang, dict }: { lang: Locale; dict: 
   const payment = localize(paymentMethods.find((m) => m.id === order.payment)!.label, lang);
   const amount = formatPrice(order.total);
 
+  // Guests have no tracking page or notifications: the manager calls the phone they gave
+  const phone = { phone: order.phone };
   const nextSteps: { icon: IconName; title: string; text: string }[] = [
-    { icon: "receipt", ...t.next.review },
-    { icon: "clock", ...t.next.ready },
+    order.guest
+      ? { icon: "receipt", title: t.guestNext.review.title, text: fill(t.guestNext.review.text, phone) }
+      : { icon: "receipt", ...t.next.review },
+    order.guest
+      ? { icon: "phone", title: t.guestNext.ready.title, text: fill(t.guestNext.ready.text, phone) }
+      : { icon: "clock", ...t.next.ready },
     { icon: "store", title: t.next.collect.title, text: fill(t.next.collect.text, { id: order.id, amount }) },
   ];
 
-  const identity = [
-    [t.identity.client, order.clientName],
-    [t.identity.clientCode, order.clientCode],
-    [t.identity.orderId, order.id],
-  ];
+  // Guests have no client code: the phone they gave identifies them for this order
+  const identity = order.guest
+    ? [
+        [t.identity.client, order.clientName],
+        [t.identity.phone, order.phone],
+        [t.identity.orderId, order.id],
+      ]
+    : [
+        [t.identity.client, order.clientName],
+        [t.identity.clientCode, order.clientCode],
+        [t.identity.orderId, order.id],
+      ];
 
   return (
     <div className="page-container py-10">
@@ -84,7 +97,7 @@ export default function OrderConfirmation({ lang, dict }: { lang: Locale; dict: 
           <p className="mt-2 text-lg">
             {fill(t.meta, { id: order.id, date: formatDate(order.placedAt, lang, t.dateFormat), fulfilment })}
           </p>
-          <p className="mt-2 text-xs text-muted-foreground">{t.receiptNote}</p>
+          <p className="mt-2 text-xs text-muted-foreground">{order.guest ? t.receiptNoteGuest : t.receiptNote}</p>
         </div>
       </section>
 
@@ -136,7 +149,10 @@ export default function OrderConfirmation({ lang, dict }: { lang: Locale; dict: 
                 </div>
               ))}
             </dl>
-            <p className="mt-4 text-xs text-muted-foreground">{t.identity.note}</p>
+            {order.guest && <p className="mt-4 text-sm font-semibold text-accent">{t.identity.guest}</p>}
+            <p className="mt-4 text-xs text-muted-foreground">
+              {order.guest ? fill(t.identity.guestNote, { phone: order.phone }) : t.identity.note}
+            </p>
           </section>
 
           <section className={card}>
@@ -158,13 +174,18 @@ export default function OrderConfirmation({ lang, dict }: { lang: Locale; dict: 
             </dl>
           </section>
 
-          <ButtonLink href={href(routes.orderConfirmation)} block size="lg">
-            {fill(t.track, { id: order.id })} <Icon name="arrowRight" className="h-4 w-4" />
-          </ButtonLink>
-          <div className="flex justify-between text-sm font-semibold text-accent">
-            <span>{t.notifications} →</span>
-            <span>{t.myOrders} →</span>
-          </div>
+          {/* Tracking and notifications live in the client area: accounts only */}
+          {!order.guest && (
+            <>
+              <ButtonLink href={href(routes.orderConfirmation)} block size="lg">
+                {fill(t.track, { id: order.id })} <Icon name="arrowRight" className="h-4 w-4" />
+              </ButtonLink>
+              <div className="flex justify-between text-sm font-semibold text-accent">
+                <span>{t.notifications} →</span>
+                <span>{t.myOrders} →</span>
+              </div>
+            </>
+          )}
         </aside>
       </div>
     </div>

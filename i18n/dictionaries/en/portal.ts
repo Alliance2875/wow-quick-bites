@@ -24,6 +24,7 @@ export const portal = {
     dashboard: "Dashboard",
     myOrders: "My orders",
     notifications: "Notifications",
+    profile: "Profile",
     overview: "Overview",
     menuAds: "Menu & Ads",
     managers: "Managers",
@@ -115,6 +116,9 @@ export const portal = {
     orders: { one: "{count} order", other: "{count} orders" },
     unreadBadge: "{count} unread",
     you: "You",
+    phone: "Phone",
+    guest: "Guest",
+    guestOrder: "Guest · no account",
   },
 };
 

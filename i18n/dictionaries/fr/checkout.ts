@@ -8,6 +8,16 @@ export const checkout: CheckoutDict = {
     title: "Connectez-vous pour commander",
     text: "Votre panier est conservé. Connectez-vous ou créez un compte pour passer votre commande.",
     signIn: "Se connecter",
+    or: "ou",
+    guest: "Continuer sans se connecter",
+    guestNote: "Aucun compte nécessaire : seulement votre nom et votre numéro de téléphone.",
+  },
+  guest: {
+    kicker: "COMMANDE INVITÉ",
+    role: "Continuer sans compte",
+    text: "Indiquez simplement votre nom et votre numéro de téléphone ci-dessous. Le gérant vous appelle à ce numéro si besoin pour votre commande.",
+    signIn: "Vous avez un compte ? Connectez-vous",
+    createAccount: "Créer un compte pour obtenir un code client permanent",
   },
   account: {
     kicker: "COMPTE CONNECTÉ",
@@ -52,4 +62,5 @@ export const checkout: CheckoutDict = {
     backToCart: "Retour au panier",
   },
   required: "Veuillez indiquer votre nom et votre numéro de téléphone.",
+  invalidPhone: "Saisissez un numéro de mobile rwandais valide (07X XXX XXXX).",
 };

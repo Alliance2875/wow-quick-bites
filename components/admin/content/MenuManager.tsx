@@ -3,7 +3,8 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { ActionButton } from "@/components/portal/ui/Action";
-import { chipClasses, Input, SearchInput, Select, TextArea, Toggle } from "@/components/portal/ui/Controls";
+import BilingualField, { PreviewLanguage } from "@/components/portal/ui/BilingualField";
+import { chipClasses, Input, SearchInput, Select, Toggle } from "@/components/portal/ui/Controls";
 import { Eyebrow, Panel } from "@/components/portal/ui/Panel";
 import Icon from "@/components/shared/ui/Icon";
 import NewBadge from "@/components/shared/ui/NewBadge";
@@ -48,6 +49,9 @@ export default function MenuManager({
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState<EditableItem>(() => items.find((i) => i.id === "mango-smoothie") ?? items[0]);
   const [message, setMessage] = useState<{ text: string; tone: "ok" | "error" } | null>(null);
+  // Storefront preview language: independent of the portal language
+  const [previewLang, setPreviewLang] = useState<Locale>(lang);
+  const bilingual = { same: t.editor.sameText, languages: t.editor.languages };
   const list = useRef<HTMLUListElement>(null);
 
   // Show the item being edited inside the scrollable list (without scrolling the page)
@@ -107,18 +111,13 @@ export default function MenuManager({
   };
 
   const save = (state: "draft" | "published") => {
-    if (!draft.name[lang].trim() || draft.price <= 0) {
-      setMessage({ text: t.editor.required, tone: "error" });
+    if ((!draft.name.en.trim() && !draft.name.fr.trim()) || draft.price <= 0) {
+      setMessage({ text: draft.price <= 0 ? t.editor.required : t.editor.requiredName, tone: "error" });
       return;
     }
-    // A new item starts with the same text in both languages until translated
-    const other = lang === "en" ? "fr" : "en";
-    const item: EditableItem = {
-      ...draft,
-      name: { ...draft.name, [other]: draft.name[other] || draft.name[lang] },
-      description: { ...draft.description, [other]: draft.description[other] || draft.description[lang] },
-      isDraftNew: false,
-    };
+    // A language left empty shows the other one until it is translated
+    const both = (text: { en: string; fr: string }) => ({ en: text.en.trim() || text.fr, fr: text.fr.trim() || text.en });
+    const item: EditableItem = { ...draft, name: both(draft.name), description: both(draft.description), isDraftNew: false };
     saveItem(item, state);
     setDraft({ ...item, state });
     recordAudit({
@@ -130,7 +129,8 @@ export default function MenuManager({
     setMessage({ text: state === "published" ? t.editor.publishedToast : t.editor.saved, tone: "ok" });
   };
 
-  const name = localize(draft.name, lang) || t.menu.newItem;
+  const name = localize(draft.name, lang) || draft.name.en || draft.name.fr || t.menu.newItem;
+  const previewName = localize(draft.name, previewLang) || name;
 
   return (
     <section aria-labelledby="menu-title" className="space-y-5">
@@ -243,13 +243,17 @@ export default function MenuManager({
               labels={{ drop: t.editor.drop, upload: t.editor.upload }}
               onImage={(image) => update({ image })}
             />
-            <Input label={t.editor.name} value={draft.name[lang]} onChange={(e) => update({ name: { ...draft.name, [lang]: e.target.value } })} />
-            <TextArea
+            {/* key: the "same text" choice is read again for each item */}
+            <BilingualField key={`${draft.id}-name`} label={t.editor.name} value={draft.name} onChange={(value) => update({ name: value })} labels={bilingual} required />
+            <BilingualField
+              key={`${draft.id}-description`}
               label={t.editor.description}
-              value={draft.description[lang]}
-              onChange={(e) => update({ description: { ...draft.description, [lang]: e.target.value } })}
+              value={draft.description}
+              onChange={(value) => update({ description: value })}
+              labels={bilingual}
+              multiline
             />
-            <p className="-mt-2 text-[0.6875rem] text-muted-foreground">{t.editor.languageNote}</p>
+            <p className="text-[0.6875rem] text-muted-foreground">{t.editor.languageNote}</p>
             <div className="grid gap-4 sm:grid-cols-2">
               <Select label={t.editor.category} value={categoryValue(draft)} options={options} onChange={(e) => setCategory(e.target.value)} />
               <Input
@@ -305,12 +309,15 @@ export default function MenuManager({
         </Panel>
 
         <div className="min-w-0 lg:col-span-2 xl:col-span-1">
-          <Eyebrow className="mb-3 text-foreground">{t.preview.card}</Eyebrow>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <Eyebrow className="text-foreground">{t.preview.card}</Eyebrow>
+            <PreviewLanguage value={previewLang} onChange={setPreviewLang} label={t.editor.previewIn} labels={t.editor.languages} />
+          </div>
           <article className="max-w-sm overflow-hidden rounded-2xl border border-border bg-card">
             <div className="relative aspect-[6/5]">
               <Image
                 src={draft.image}
-                alt={name}
+                alt={previewName}
                 fill
                 sizes="(min-width: 1280px) 21rem, 24rem"
                 unoptimized={draft.image.startsWith("blob:")}
@@ -319,11 +326,11 @@ export default function MenuManager({
               {draft.isNew && <NewBadge label={t.preview.new} className="absolute left-3 top-3" />}
             </div>
             <div className="space-y-2 p-5">
-              <h3 className="text-lg font-semibold">{name}</h3>
-              <p className="line-clamp-2 text-xs text-muted-foreground">{localize(draft.description, lang)}</p>
+              <h3 className="text-lg font-semibold">{previewName}</h3>
+              <p className="line-clamp-2 text-xs text-muted-foreground">{localize(draft.description, previewLang)}</p>
               <div className="flex flex-wrap gap-1">
                 {draft.tags.map((tag) => (
-                  <Tag key={tag}>{tagLabel(tag, lang)}</Tag>
+                  <Tag key={tag}>{tagLabel(tag, previewLang)}</Tag>
                 ))}
               </div>
               <div className="flex items-center justify-between pt-2">

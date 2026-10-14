@@ -2,7 +2,7 @@ import type { AccountDict } from "../en/account";
 
 export const account: AccountDict = {
   google: "Continuer avec Google",
-  googleSoon: "La connexion avec Google arrive bientôt.",
+  googleError: "La connexion avec Google n’a pas abouti. Réessayez ou utilisez votre e-mail.",
   or: "ou",
   fields: {
     fullName: "Nom complet",
@@ -19,6 +19,11 @@ export const account: AccountDict = {
     exists: "Un compte existe déjà avec cet email. Connectez-vous plutôt.",
     missing: "Remplissez tous les champs (mot de passe : au moins 6 caractères).",
     server: "La connexion est indisponible pour le moment. Réessayez plus tard.",
+    phone: "Saisissez un numéro de mobile rwandais valide (07X XXX XXXX).",
+    code: "Ce code est incorrect. Vérifiez l’e-mail et réessayez.",
+    expired: "Cette étape a expiré. Veuillez recommencer.",
+    tooMany: "Trop de tentatives. Demandez un nouveau code.",
+    wait: "Patientez quelques secondes avant de demander un nouveau code.",
   },
   signIn: {
     metaTitle: "Connexion",
@@ -36,6 +41,27 @@ export const account: AccountDict = {
     submit: "Créer un compte",
     pending: "Création de votre compte…",
     switch: "Vous avez déjà un compte ? Connectez-vous",
+  },
+  verify: {
+    metaTitle: "Vérifiez votre compte",
+    title: "Vérifiez votre compte",
+    text: "Nous avons envoyé un code à 6 chiffres à votre adresse e-mail",
+    codeLabel: "Code de vérification à 6 chiffres",
+    digit: "Chiffre {n} sur 6",
+    submit: "Vérifier",
+    pending: "Vérification…",
+    noCode: "Vous n’avez pas reçu le code ?",
+    resend: "Renvoyer le code",
+    resent: "Un nouveau code est en route. Consultez votre boîte de réception.",
+    back: "Retour à la connexion",
+    devCode: "Développement uniquement — aucun e-mail n’est encore envoyé. Votre code est {code} (aussi dans la console du serveur).",
+    expiredTitle: "Votre vérification a expiré",
+    expiredText: "Pour votre sécurité, les codes sont valables 10 minutes. Créez à nouveau votre compte pour en recevoir un nouveau.",
+    restart: "Créer à nouveau le compte",
+  },
+  finishSignIn: {
+    metaTitle: "Connexion",
+    redirecting: "Connexion en cours…",
   },
   recovery: {
     metaTitle: "Récupération du mot de passe",

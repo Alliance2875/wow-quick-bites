@@ -5,6 +5,24 @@ import type { PortalOrder } from "./types";
 
 export const orders: PortalOrder[] = [
   {
+    // Guest order ("Continue without signing in"): no client code, only a name and a phone
+    id: "ORD-1044",
+    clientCode: "",
+    guest: true,
+    contact: { name: "Olivier", phone: "079 555 0142" },
+    managerId: "nadia",
+    placedAt: "2026-10-06T12:28:00+02:00",
+    fulfilment: "pickup",
+    payment: "pay-on-pickup",
+    paymentStatus: "pending",
+    stage: "new",
+    lines: [
+      { itemId: "fresh-mint-mojito", quantity: 2 },
+      { itemId: "wow-toasted-burger", quantity: 1 },
+    ],
+    history: { new: "2026-10-06T12:28:00+02:00" },
+  },
+  {
     id: "ORD-1043",
     clientCode: "WQB003A",
     managerId: "eric",

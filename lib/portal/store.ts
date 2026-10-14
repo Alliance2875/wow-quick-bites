@@ -18,6 +18,8 @@ export type PortalNotification = Omit<ClientNotification, "title" | "text"> &
   Partial<Pick<ClientNotification, "title" | "text">> & { managerId?: string };
 
 type State = {
+  /** Orders placed on the storefront in this browser (accounts and guests) */
+  placed?: PortalOrder[];
   orders: Record<string, OrderChange>;
   events: PortalNotification[];
   readNotifications: string[];
@@ -29,13 +31,24 @@ const store = createStore<State>("wqb-portal", empty);
 
 /** Time of a change made in the demo: just after the sample clock, one minute per change. */
 const demoTime = (state: State) =>
-  new Date(portalNow() + (Object.keys(state.orders).length + 1) * 60_000).toISOString();
+  new Date(portalNow() + (Object.keys(state.orders).length + (state.placed?.length ?? 0) + 1) * 60_000).toISOString();
 
 // ───────── Orders ─────────
 
 export function useOrders(): PortalOrder[] {
-  const { orders } = store.useValue();
-  return useMemo(() => sampleOrders.map((order) => ({ ...order, ...orders[order.id] })), [orders]);
+  const { orders, placed } = store.useValue();
+  return useMemo(
+    () => [...(placed ?? []), ...sampleOrders].map((order) => ({ ...order, ...orders[order.id] })),
+    [orders, placed],
+  );
+}
+
+/** Checkout → register queue (POST /orders with the backend). Placed on the portal clock. */
+export function addPlacedOrder(order: Omit<PortalOrder, "placedAt" | "history" | "stage">) {
+  store.set((state) => {
+    const at = demoTime(state);
+    return { ...state, placed: [{ ...order, placedAt: at, stage: "new", history: { new: at } }, ...(state.placed ?? [])] };
+  });
 }
 
 export function moveOrder(order: PortalOrder, stage: OrderStage) {

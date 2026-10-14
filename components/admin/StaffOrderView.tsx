@@ -10,13 +10,12 @@ import { DotText } from "@/components/portal/ui/Status";
 import { Table, Td, Th, THead, Tr } from "@/components/portal/ui/Table";
 import { useToast } from "@/components/portal/ui/Toast";
 import Icon from "@/components/shared/ui/Icon";
-import { getClient } from "@/data/clients";
 import { getStaff } from "@/data/staff";
 import { localize, type Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import { cn, fill, formatPrice, plural } from "@/lib/format";
 import { formatAmount, formatDateTime, formatTime } from "@/lib/portal/format";
-import { isActiveOrder, itemCount, orderLines, orderTotal, stageFlow } from "@/lib/portal/orders";
+import { customerName, customerPhone, isActiveOrder, itemCount, orderLines, orderTotal, stageFlow } from "@/lib/portal/orders";
 import { moveOrder, useOrders } from "@/lib/portal/store";
 import { localePath, routes } from "@/lib/routes";
 import RegisterAction, { canAct, type StaffViewer } from "./RegisterAction";
@@ -38,7 +37,9 @@ export default function StaffOrderView({
   const p = dict.portal;
   const { show, toast } = useToast();
   const order = useOrders().find((o) => o.id === orderId)!;
-  const client = getClient(order.clientCode)?.name ?? order.clientCode;
+  const client = customerName(order) || order.clientCode;
+  const phone = customerPhone(order);
+  // Guests have no permanent code: "Guest · no account" takes its place in the texts
   const manager = getStaff(order.managerId)?.name ?? "—";
   const total = orderTotal(order);
 
@@ -46,7 +47,7 @@ export default function StaffOrderView({
   const values = {
     id: order.id,
     client,
-    code: order.clientCode,
+    code: order.guest ? p.common.guestOrder : order.clientCode,
     manager,
     placed: formatTime(order.placedAt),
     accepted: at("accepted"),
@@ -61,7 +62,7 @@ export default function StaffOrderView({
     <div className="space-y-6">
       <PageHeader
         title={fill(t.title, { id: order.id })}
-        subtitle={fill(t.subtitle, { client, code: order.clientCode, fulfilment: p.fulfilment[order.fulfilment], manager })}
+        subtitle={fill(t.subtitle, { client, code: values.code, fulfilment: p.fulfilment[order.fulfilment], manager })}
         action={
           <ActionLink
             href={`${localePath(lang, routes.adminOrders)}${fromQueue ? `?selected=${encodeURIComponent(order.id)}` : ""}`}
@@ -160,7 +161,10 @@ export default function StaffOrderView({
               labelWidth="w-auto min-w-24"
               rows={[
                 { label: p.common.client, value: client },
-                { label: p.common.permanentCode, value: order.clientCode },
+                order.guest
+                  ? { label: p.common.permanentCode, value: p.common.guestOrder }
+                  : { label: p.common.permanentCode, value: order.clientCode },
+                ...(phone ? [{ label: p.common.phone, value: phone }] : []),
                 { label: p.common.orderId, value: order.id },
                 { label: p.common.manager, value: manager },
               ]}

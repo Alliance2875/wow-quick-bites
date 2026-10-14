@@ -10,7 +10,6 @@ import { StageText } from "@/components/portal/ui/Status";
 import { Table, TableFooter, Td, Th, THead, Tr } from "@/components/portal/ui/Table";
 import { useToast } from "@/components/portal/ui/Toast";
 import Icon from "@/components/shared/ui/Icon";
-import { getClient } from "@/data/clients";
 import { getStaff } from "@/data/staff";
 import type { OrderStage, PortalOrder } from "@/data/types";
 import type { Locale } from "@/i18n/config";
@@ -18,19 +17,35 @@ import type { Dictionary } from "@/i18n/get-dictionary";
 import { cn, fill, plural } from "@/lib/format";
 import { daysAgo } from "@/lib/portal/clock";
 import { formatAmount, formatDate, formatTime } from "@/lib/portal/format";
-import { countByStage, inQueueWindow, isActiveOrder, itemCount, itemsSummary, newestFirst, orderTotal } from "@/lib/portal/orders";
+import {
+  countByStage,
+  customerKey,
+  customerName,
+  customerPhone,
+  inQueueWindow,
+  isActiveOrder,
+  itemCount,
+  itemsSummary,
+  newestFirst,
+  orderTotal,
+} from "@/lib/portal/orders";
 import { useOrders } from "@/lib/portal/store";
 import { localePath, routes } from "@/lib/routes";
 import RegisterAction, { canAct, type StaffViewer } from "./RegisterAction";
 
 const stages: OrderStage[] = ["new", "accepted", "preparing", "ready", "completed", "cancelled"];
 
-/** Orders of the same client next to each other, clients with the latest activity first. */
+type CustomerFilter = "all" | "account" | "guest";
+
+/** Orders of the same customer next to each other (client code, or phone for guests), latest activity first. */
 function groupByClient(orders: PortalOrder[]) {
   const latest = new Map<string, number>();
-  orders.forEach((o) => latest.set(o.clientCode, Math.max(latest.get(o.clientCode) ?? 0, Date.parse(o.placedAt))));
+  orders.forEach((o) => latest.set(customerKey(o), Math.max(latest.get(customerKey(o)) ?? 0, Date.parse(o.placedAt))));
   return [...orders].sort(
-    (a, b) => latest.get(b.clientCode)! - latest.get(a.clientCode)! || a.clientCode.localeCompare(b.clientCode) || newestFirst(a, b),
+    (a, b) =>
+      latest.get(customerKey(b))! - latest.get(customerKey(a))! ||
+      customerKey(a).localeCompare(customerKey(b)) ||
+      newestFirst(a, b),
   );
 }
 
@@ -52,6 +67,7 @@ export default function OrderQueue({
   const [mine, setMine] = useState(false);
   const [grouped, setGrouped] = useState(true);
   const [query, setQuery] = useState("");
+  const [customers, setCustomers] = useState<CustomerFilter>("all");
   const [activeOrderId, setActiveOrderId] = useState(selectedOrderId);
 
   useEffect(() => setActiveOrderId(selectedOrderId), [selectedOrderId]);
@@ -59,18 +75,21 @@ export default function OrderQueue({
   const all = useOrders().filter(inQueueWindow);
   const counts = countByStage(all);
   const q = query.trim().toLowerCase();
+  const digits = q.replace(/\D/g, "");
   const filtered = all
     .filter((o) => stage === "all" || o.stage === stage)
     .filter((o) => !mine || o.managerId === viewer.id)
+    .filter((o) => customers === "all" || (customers === "guest") === Boolean(o.guest))
     .filter(
       (o) =>
         !q ||
         o.id.toLowerCase().includes(q) ||
         o.clientCode.toLowerCase().includes(q) ||
-        (getClient(o.clientCode)?.name ?? "").toLowerCase().includes(q),
+        customerName(o).toLowerCase().includes(q) ||
+        (digits.length > 2 && (customerPhone(o) ?? "").replace(/\D/g, "").includes(digits)),
     );
   const shown = grouped ? groupByClient(filtered) : [...filtered].sort(newestFirst);
-  const perClient = (code: string) => shown.filter((o) => o.clientCode === code);
+  const perClient = (key: string) => shown.filter((o) => customerKey(o) === key);
 
   const placedLabel = (iso: string) => {
     const days = daysAgo(iso);
@@ -121,6 +140,21 @@ export default function OrderQueue({
             </select>
             <Icon name="chevronDown" className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           </label>
+          <label className="relative">
+            <span className="sr-only">{t.customersLabel}</span>
+            <select
+              value={customers}
+              onChange={(e) => setCustomers(e.target.value as CustomerFilter)}
+              className="h-10 cursor-pointer appearance-none rounded-md border border-border bg-panel pl-4 pr-9 text-[0.8125rem] outline-none focus:border-primary"
+            >
+              {(["all", "account", "guest"] as const).map((id) => (
+                <option key={id} value={id}>
+                  {t.customers[id]}
+                </option>
+              ))}
+            </select>
+            <Icon name="chevronDown" className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          </label>
           {viewer.role === "manager" && (
             <button
               type="button"
@@ -147,7 +181,7 @@ export default function OrderQueue({
 
       <Panel
         title={grouped ? t.grouped : t.byTime}
-        subtitle={fill(t.groupedMeta, { orders: shown.length, clients: new Set(shown.map((o) => o.clientCode)).size })}
+        subtitle={fill(t.groupedMeta, { orders: shown.length, clients: new Set(shown.map(customerKey)).size })}
         action={<span className="text-[0.6875rem] text-muted-foreground">{t.register}</span>}
         bodyClassName=""
       >
@@ -163,8 +197,9 @@ export default function OrderQueue({
           </THead>
           <tbody>
             {shown.map((order) => {
-              const client = getClient(order.clientCode);
-              const siblings = perClient(order.clientCode);
+              const key = customerKey(order);
+              const name = customerName(order);
+              const siblings = perClient(key);
               const repeat = siblings.length > 1;
               const isLatest = siblings[0]?.id === order.id || !grouped;
               const actionable = canAct(viewer, order) && isActiveOrder(order);
@@ -180,13 +215,22 @@ export default function OrderQueue({
                   }}
                 >
                   <Td>
-                    <p className={cn("font-semibold", repeat && grouped && "text-accent")}>{order.clientCode}</p>
+                    {order.guest ? (
+                      <p className="flex items-center gap-2">
+                        <span className={cn("font-semibold", repeat && grouped && "text-accent")}>{name}</span>
+                        <span className="rounded-full bg-panel-muted px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-wide text-muted-foreground">
+                          {p.common.guest}
+                        </span>
+                      </p>
+                    ) : (
+                      <p className={cn("font-semibold", repeat && grouped && "text-accent")}>{order.clientCode}</p>
+                    )}
                     <p className="mt-0.5 whitespace-nowrap text-[0.6875rem] text-muted-foreground">
-                      {isLatest
-                        ? fill(plural(t.clientOrders, all.filter((o) => o.clientCode === order.clientCode).length), {
-                            name: client?.name ?? "",
-                          })
-                        : fill(t.previousPurchase, { name: client?.name ?? "" })}
+                      {order.guest
+                        ? fill(t.guestLine, { phone: customerPhone(order) ?? "" })
+                        : isLatest
+                          ? fill(plural(t.clientOrders, all.filter((o) => customerKey(o) === key).length), { name })
+                          : fill(t.previousPurchase, { name })}
                     </p>
                   </Td>
                   <Td>

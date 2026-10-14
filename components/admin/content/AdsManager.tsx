@@ -3,7 +3,8 @@
 import Image from "next/image";
 import { useState } from "react";
 import { ActionButton } from "@/components/portal/ui/Action";
-import { Input, Select, TextArea } from "@/components/portal/ui/Controls";
+import BilingualField, { PreviewLanguage } from "@/components/portal/ui/BilingualField";
+import { Input, Select } from "@/components/portal/ui/Controls";
 import { Eyebrow, Panel } from "@/components/portal/ui/Panel";
 import { Badge } from "@/components/portal/ui/Status";
 import Icon from "@/components/shared/ui/Icon";
@@ -36,6 +37,9 @@ export default function AdsManager({
   const campaigns = useCampaigns();
   const [draft, setDraft] = useState<EditableCampaign>(() => campaigns[0]);
   const [message, setMessage] = useState<string | null>(null);
+  // Storefront preview language: independent of the portal language
+  const [previewLang, setPreviewLang] = useState<Locale>(lang);
+  const bilingual = { same: c.editor.sameText, languages: c.editor.languages };
 
   const status = (campaign: EditableCampaign): Status => (campaign.paused ? "paused" : campaign.status);
   const audit = (template: "adDraft" | "adPublished" | "adPaused" | "adResumed" | "adDeleted" | "adCancelled", campaign: EditableCampaign) =>
@@ -51,7 +55,16 @@ export default function AdsManager({
 
   const save = (publish: boolean) => {
     const later = Boolean(draft.startsAt && Date.parse(draft.startsAt) > portalNow());
-    const campaign: EditableCampaign = { ...draft, status: publish ? (later ? "scheduled" : "published") : "draft", paused: false };
+    // A language left empty shows the other one until it is translated
+    const both = (text: { en: string; fr: string }) => ({ en: text.en.trim() || text.fr, fr: text.fr.trim() || text.en });
+    const campaign: EditableCampaign = {
+      ...draft,
+      title: both(draft.title),
+      text: both(draft.text),
+      cta: both(draft.cta),
+      status: publish ? (later ? "scheduled" : "published") : "draft",
+      paused: false,
+    };
     saveCampaign(campaign);
     setDraft(campaign);
     audit(publish ? "adPublished" : "adDraft", campaign);
@@ -79,7 +92,8 @@ export default function AdsManager({
       ? fill(t.scheduledFrom, { date: `${formatDayMonth(campaign.startsAt)}, ${formatTime(campaign.startsAt)}` })
       : fill(t.placementLine, { schedule: campaign.schedule ? localize(campaign.schedule, lang) : t.notScheduled });
 
-  const title = localize(draft.title, lang);
+  const title = localize(draft.title, lang) || draft.title.en || draft.title.fr;
+  const previewTitle = localize(draft.title, previewLang) || title;
   const categoryOptions = [
     { value: "", label: t.wholeMenu },
     ...categories.map((x) => ({ value: x.id, label: fill(t.menuCategory, { category: localize(x.name, lang) }) })),
@@ -196,18 +210,24 @@ export default function AdsManager({
               labels={{ drop: c.editor.drop, upload: c.editor.upload }}
               onImage={(image) => update({ image })}
             />
-            <Input label={t.headline} value={draft.title[lang]} onChange={(e) => update({ title: { ...draft.title, [lang]: e.target.value } })} />
-            <TextArea label={t.copy} value={draft.text[lang]} onChange={(e) => update({ text: { ...draft.text, [lang]: e.target.value } })} />
-            <p className="-mt-2 text-[0.6875rem] text-muted-foreground">{c.editor.languageNote}</p>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Select
-                label={t.tag}
-                value={draft.tag}
-                options={(["promotion", "new", "offer"] as const).map((tag) => ({ value: tag, label: t.tags[tag] }))}
-                onChange={(e) => update({ tag: e.target.value as Campaign["tag"] })}
-              />
-              <Input label={t.cta} value={draft.cta[lang]} onChange={(e) => update({ cta: { ...draft.cta, [lang]: e.target.value } })} />
-            </div>
+            {/* key: the "same text" choice is read again for each ad */}
+            <BilingualField key={`${draft.promotionId}-title`} label={t.headline} value={draft.title} onChange={(title) => update({ title })} labels={bilingual} />
+            <BilingualField
+              key={`${draft.promotionId}-text`}
+              label={t.copy}
+              value={draft.text}
+              onChange={(text) => update({ text })}
+              labels={bilingual}
+              multiline
+            />
+            <BilingualField key={`${draft.promotionId}-cta`} label={t.cta} value={draft.cta} onChange={(cta) => update({ cta })} labels={bilingual} />
+            <p className="text-[0.6875rem] text-muted-foreground">{c.editor.languageNote}</p>
+            <Select
+              label={t.tag}
+              value={draft.tag}
+              options={(["promotion", "new", "offer"] as const).map((tag) => ({ value: tag, label: t.tags[tag] }))}
+              onChange={(e) => update({ tag: e.target.value as Campaign["tag"] })}
+            />
             <Select
               label={t.destination}
               value={draft.ctaCategory ?? ""}
@@ -250,12 +270,15 @@ export default function AdsManager({
         </Panel>
 
         <div className="min-w-0 lg:col-span-2 xl:col-span-1">
-          <Eyebrow className="mb-3 text-foreground">{c.preview.offer}</Eyebrow>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <Eyebrow className="text-foreground">{c.preview.offer}</Eyebrow>
+            <PreviewLanguage value={previewLang} onChange={setPreviewLang} label={c.editor.previewIn} labels={c.editor.languages} />
+          </div>
           <article className="max-w-sm overflow-hidden rounded-2xl border border-border bg-card">
             <div className="relative aspect-[3/2]">
               <Image
                 src={draft.image}
-                alt={title}
+                alt={previewTitle}
                 fill
                 sizes="(min-width: 1280px) 21rem, 24rem"
                 unoptimized={draft.image.startsWith("blob:")}
@@ -264,10 +287,10 @@ export default function AdsManager({
             </div>
             <div className="p-5">
               <Badge>{t.tags[draft.tag]}</Badge>
-              <h3 className="mt-3 text-xl font-semibold">{title || t.editorNew}</h3>
-              <p className="mt-2 text-[0.8125rem] leading-relaxed text-muted-foreground">{localize(draft.text, lang)}</p>
+              <h3 className="mt-3 text-xl font-semibold">{previewTitle || t.editorNew}</h3>
+              <p className="mt-2 text-[0.8125rem] leading-relaxed text-muted-foreground">{localize(draft.text, previewLang)}</p>
               <span className="mt-4 inline-flex rounded-md bg-primary px-4 py-2.5 text-[0.8125rem] font-bold text-primary-foreground">
-                {localize(draft.cta, lang)}
+                {localize(draft.cta, previewLang)}
               </span>
             </div>
           </article>

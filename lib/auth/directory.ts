@@ -4,8 +4,9 @@ import { clients } from "@/data/clients";
 import { staff } from "@/data/staff";
 import type { SessionPayload } from "./token";
 
-// MOCK identity provider until the backend auth API exists: replace authenticate() and
-// register() with calls to it — the rest of the auth flow (session cookie, proxy, DAL) stays.
+// MOCK identity provider until the backend auth API exists: replace authenticate(), register(),
+// isEmailTaken() and googleAccount() with calls to it — the rest of the auth flow (session
+// cookie, proxy, DAL) stays.
 //
 // Demo accounts (README → "Portal access"):
 //   staff   owner@wowquickbites.rw (superadmin), eric@ / nadia@ / kevin@ / chantal@wowquickbites.rw
@@ -68,11 +69,29 @@ export function authenticate(rawEmail: string, password: string): AuthResult {
   return { ok: true, email, clientCode: code, session: { sub: code, role: "client", name: nameFromEmail(email) } };
 }
 
+export const isEmailTaken = (rawEmail: string) => {
+  const email = normalize(rawEmail);
+  return staff.some((person) => person.email === email) || clients.some((person) => person.email === email);
+};
+
+/** Called once the email is verified (one-time code), never before. */
 export function register(input: { name: string; email: string }): AuthResult {
   const email = normalize(input.email);
-  if (staff.some((person) => person.email === email) || clients.some((person) => person.email === email)) {
-    return { ok: false, error: "exists" };
-  }
+  if (isEmailTaken(email)) return { ok: false, error: "exists" };
   const code = mockClientCode(email);
   return { ok: true, email, clientCode: code, session: { sub: code, role: "client", name: input.name } };
+}
+
+/**
+ * Google sign-in (email already verified by Google): the matching client account, or a new one.
+ * Staff accounts keep their password sign-in. `phone` is unknown for new accounts: it is asked
+ * at checkout (contact section) and can be added on the profile page.
+ */
+export function googleAccount(profile: { email: string; name: string }): (AuthResult & { ok: true; phone?: string }) | { ok: false; error: "staff" } {
+  const email = normalize(profile.email);
+  if (staff.some((person) => person.email === email)) return { ok: false, error: "staff" };
+  const client = clients.find((person) => person.email === email);
+  const code = client?.code ?? mockClientCode(email);
+  const name = client?.name ?? (profile.name || nameFromEmail(email));
+  return { ok: true, email, clientCode: code, phone: client?.phone, session: { sub: code, role: "client", name } };
 }

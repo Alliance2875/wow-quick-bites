@@ -8,14 +8,13 @@ import { Panel } from "@/components/portal/ui/Panel";
 import { StageText } from "@/components/portal/ui/Status";
 import { Table, TableFooter, Td, Th, THead, Tr } from "@/components/portal/ui/Table";
 import Icon from "@/components/shared/ui/Icon";
-import { getClient } from "@/data/clients";
 import { getStaff } from "@/data/staff";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import { cn, fill, formatPrice, plural } from "@/lib/format";
 import { daysAgo } from "@/lib/portal/clock";
 import { formatAmount, formatTime } from "@/lib/portal/format";
-import { countByStage, inQueueWindow, isActiveOrder, newestFirst, orderTotal } from "@/lib/portal/orders";
+import { countByStage, customerName, inQueueWindow, isActiveOrder, newestFirst, orderTotal } from "@/lib/portal/orders";
 import { useOrders } from "@/lib/portal/store";
 import { useAudit, useManagers } from "@/lib/portal/staff-store";
 import { localePath, routes } from "@/lib/routes";
@@ -114,8 +113,10 @@ export default function AdminOverview({ lang, dict }: { lang: Locale; dict: Dict
                       <p className="mt-0.5 text-[0.6875rem] text-muted-foreground">{formatTime(order.placedAt)}</p>
                     </Td>
                     <Td>
-                      <p className="font-semibold">{order.clientCode}</p>
-                      <p className="mt-0.5 text-[0.6875rem] text-muted-foreground">{getClient(order.clientCode)?.name}</p>
+                      <p className="font-semibold">{order.guest ? customerName(order) : order.clientCode}</p>
+                      <p className="mt-0.5 text-[0.6875rem] text-muted-foreground">
+                        {order.guest ? p.common.guestOrder : customerName(order)}
+                      </p>
                     </Td>
                     <Td>
                       <StageText stage={order.stage} label={p.stages[order.stage]} />

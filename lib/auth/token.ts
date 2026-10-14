@@ -32,6 +32,7 @@ export async function signSession(payload: SessionPayload) {
   return new SignJWT({ role: payload.role, name: payload.name })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(payload.sub)
+    .setAudience("session")
     .setIssuedAt()
     .setExpirationTime(`${SESSION_TTL_SECONDS}s`)
     .sign(secretKey());
@@ -41,13 +42,46 @@ export async function signSession(payload: SessionPayload) {
 export async function verifySession(token: string | undefined): Promise<SessionPayload | null> {
   if (!token) return null;
   try {
-    const { payload } = await jwtVerify(token, secretKey(), { algorithms: ["HS256"] });
+    const { payload } = await jwtVerify(token, secretKey(), { algorithms: ["HS256"], audience: "session" });
     if (!payload.sub || !isRole(payload.role) || typeof payload.name !== "string") return null;
     return { sub: payload.sub, role: payload.role, name: payload.name };
   } catch {
     return null;
   }
 }
+
+/**
+ * Short-lived signed data for the auth flows (pending sign-up, Google state and profile).
+ * The audience ties each token to one purpose, so a token of one flow is refused by another.
+ */
+export async function signData(purpose: string, data: Record<string, unknown>, ttlSeconds: number) {
+  return new SignJWT({ data })
+    .setProtectedHeader({ alg: "HS256" })
+    .setAudience(purpose)
+    .setIssuedAt()
+    .setExpirationTime(`${ttlSeconds}s`)
+    .sign(secretKey());
+}
+
+export async function verifyData<T>(purpose: string, token: string | undefined): Promise<T | null> {
+  if (!token) return null;
+  try {
+    const { payload } = await jwtVerify(token, secretKey(), { algorithms: ["HS256"], audience: purpose });
+    return (payload.data as T) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** HMAC of a one-time code, so the signed (but readable) pending cookie never reveals the code. */
+export async function hashCode(code: string, salt: string) {
+  const key = await crypto.subtle.importKey("raw", secretKey(), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${salt}:${code}`));
+  return Buffer.from(mac).toString("hex");
+}
+
+/** Cookies of the auth flows: HttpOnly, never sent to other sites. */
+export const flowCookieOptions = (maxAge: number) => ({ ...sessionCookieOptions, maxAge });
 
 export const sessionCookieOptions = {
   httpOnly: true,

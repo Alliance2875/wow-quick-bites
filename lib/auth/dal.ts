@@ -2,7 +2,6 @@ import "server-only";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
-import { getClient } from "@/data/clients";
 import { getStaff } from "@/data/staff";
 import type { ContentGrant } from "@/data/types";
 import type { Locale } from "@/i18n/config";
@@ -32,9 +31,14 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
   if (!session) return null;
 
   if (session.role === "client") {
-    // Sample clients take their name from the client record; mock accounts from the session
-    const client = getClient(session.sub);
-    return { id: session.sub, role: "client", name: client?.name ?? session.name, clientCode: session.sub, permissions: [] };
+    // The session carries the current display name (updated from the profile page)
+    return {
+      id: session.sub,
+      role: "client",
+      name: session.name,
+      clientCode: session.sub,
+      permissions: [],
+    };
   }
 
   // Staff: the directory decides, not the cookie (role changes and suspensions apply at once)

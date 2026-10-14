@@ -8,7 +8,6 @@ import { TextField } from "@/components/shared/ui/Field";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import { signUpAction, type AuthFormState } from "@/lib/auth/actions";
-import { rememberSession } from "@/lib/auth/session";
 import { localePath, routes } from "@/lib/routes";
 import AuthCard from "./AuthCard";
 import AuthError from "./AuthError";
@@ -21,16 +20,16 @@ export default function SignUpForm({ lang, dict }: { lang: Locale; dict: Diction
 
   const [state, action, pending] = useActionState(async (previous: AuthFormState, form: FormData) => {
     const result = await signUpAction(previous, form);
-    if (result && "user" in result) {
-      rememberSession(result.user);
-      router.replace(result.redirectTo);
+    // The account is created once the emailed code is verified (next page)
+    if (result && "verify" in result) {
+      router.push(result.verify);
       router.refresh();
     }
     return result;
   }, undefined);
 
   return (
-    <AuthCard title={dict.signUp.title} subtitle={dict.signUp.subtitle} dict={dict}>
+    <AuthCard title={dict.signUp.title} subtitle={dict.signUp.subtitle} dict={dict} lang={lang} next={next}>
       <form action={action} className="space-y-5">
         <input type="hidden" name="lang" value={lang} />
         <input type="hidden" name="next" value={next} />
@@ -53,8 +52,8 @@ export default function SignUpForm({ lang, dict }: { lang: Locale; dict: Diction
           labels={{ show: dict.fields.showPassword, hide: dict.fields.hidePassword }}
         />
         {state && "error" in state && <AuthError message={dict.errors[state.error]} />}
-        <Button type="submit" block size="lg" disabled={pending}>
-          {pending ? dict.signUp.pending : dict.signUp.submit}
+        <Button type="submit" block size="lg" disabled={pending || Boolean(state && "verify" in state)}>
+          {pending || (state && "verify" in state) ? dict.signUp.pending : dict.signUp.submit}
         </Button>
       </form>
       <Link

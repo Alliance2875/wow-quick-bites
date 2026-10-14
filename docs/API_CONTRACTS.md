@@ -65,10 +65,26 @@ Errors: `401 invalid_credentials`, `403 account_suspended`, `429 too_many_attemp
 ```json
 // request
 { "name": "Aline", "email": "aline@example.com", "phone": "078 123 4567", "password": "min 6 chars" }
-// 201
+// 202 — nothing is created yet: a 6-digit code is emailed
+{ "pendingVerification": true, "email": "aline@example.com" }
+```
+Errors: `409 email_taken`, `422 validation_failed` (phone: Rwandan mobile, `07X XXX XXXX` / `+250 7XX XXX XXX`).
+
+### `POST /auth/verify-email` — public
+```json
+// request
+{ "email": "aline@example.com", "code": "123456" }
+// 201 — the account exists from here on, and the session starts
 { "user": SessionUser }
 ```
-The backend **assigns the permanent client code** (`WQB` + 3 digits + letter). Errors: `409 email_taken`, `422 validation_failed`.
+The backend **assigns the permanent client code** (`WQB` + 3 digits + letter). Codes are valid 10 minutes, 5 attempts
+max. Errors: `400 invalid_code`, `410 code_expired`, `429 too_many_attempts`.
+
+### `POST /auth/verify-email/resend` — public
+`{ "email" }` → `202`. At most one code every 30 seconds (`429` otherwise); a new code invalidates the previous one.
+
+Frontend today (mock): `lib/auth/flows.ts` keeps the pending sign-up in a signed HttpOnly cookie and logs the code
+in the dev console (also shown on `/verify-email` in development only).
 
 ### `POST /auth/sign-out` — any session → `204`
 
@@ -103,7 +119,18 @@ Replaces the stand-in in `components/account/ForgotPasswordFlow.tsx`.
 The reset email links to `https://<site>/{lang}/forgot-password?token=…` ❓ confirm the link format.
 
 ### Google sign-in
-Button exists (`components/account/AuthCard.tsx`). ❓ OAuth flow and callback URL to agree on.
+Implemented on the frontend as OAuth 2.0 authorization code + PKCE (`app/api/auth/google/` →
+`/api/auth/google/callback` → `/{lang}/finish-sign-in`), configured with `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`
+(see `.env.example`). The account is matched by Google's **verified** email, or created as a client account.
+No phone step after Google sign-in: a missing phone is asked at checkout and can be added on the profile page.
+
+Needed from the backend: `POST /auth/google` `{ "email", "name" }` (called server-side by the callback, trusted
+caller) → `200 { "user": SessionUser }` (existing account) or `201` (new client account, code assigned). Staff
+emails are refused (`403 staff_password_only`). ❓ Or should the backend run the OAuth exchange itself?
+
+### `PATCH /me` — client
+`{ "name"?, "phone"? }` → `200 { "user": SessionUser }`. Used by the profile page (`/account/profile`). The email
+is the sign-in identity and is not editable there.
 
 ---
 
@@ -195,7 +222,10 @@ server cart is only needed for cross-device carts; if so: `GET/PUT /cart` with t
 type CartLine = { itemId: string; quantity: number; choices: string[]; note?: string };
 ```
 
-### `POST /orders` — client
+### `POST /orders` — client **or guest** (no session)
+Guests ("Continue without signing in" at checkout) give only `contact.name` and `contact.phone`; their order has
+no client code and carries `"guest": true`. Staff see both kinds in the queue (filter + "Guest" badge); guest
+orders are grouped by phone number.
 ```json
 // request
 {
@@ -224,7 +254,9 @@ Replaces: `data/orders.ts`, `lib/portal/store.ts` (`useOrders`, `moveOrder`).
 ```ts
 type Order = {
   id: string;                    // "ORD-1042"
-  clientCode: string;            // "WQB001A"
+  clientCode: string;            // "WQB001A" — empty for guest orders
+  guest?: boolean;               // ordered without an account
+  contact?: { name: string; phone: string }; // given at checkout (always for guests)
   clientName: string;
   managerId: string;             // staff id in charge
   placedAt: string;

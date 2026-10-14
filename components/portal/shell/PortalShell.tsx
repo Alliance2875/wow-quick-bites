@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import LanguageToggle from "@/components/shared/layout/LanguageToggle";
 import SignOutButton from "@/components/shared/layout/SignOutButton";
+import SiteHeader from "@/components/shared/layout/SiteHeader";
 import ThemeToggle from "@/components/shared/layout/ThemeToggle";
 import Icon from "@/components/shared/ui/Icon";
 import { getStaff } from "@/data/staff";
@@ -28,6 +29,7 @@ function navigation(lang: Locale, viewer: Viewer, dict: Dictionary["portal"]): N
           { href: href(routes.account), label: nav.dashboard, icon: "layoutGrid", exact: true },
           { href: href(routes.accountOrders), label: nav.myOrders, icon: "shoppingBag" },
           { href: href(routes.accountNotifications), label: nav.notifications, icon: "bell", badge: "clientNotifications" },
+          { href: href(routes.accountProfile), label: nav.profile, icon: "user" },
         ],
       },
     ];
@@ -63,12 +65,15 @@ export default function PortalShell({
   lang,
   viewer,
   dict,
+  common,
   extraCrumbs = [],
   children,
 }: {
   lang: Locale;
   viewer: Viewer;
   dict: Dictionary["portal"];
+  /** Client area: the storefront header (yellow navbar) is shown on top, as in the designs */
+  common?: Dictionary["common"];
   /** Pages that are not in the sidebar (client order tracking…) */
   extraCrumbs?: Crumb[];
   children: React.ReactNode;
@@ -93,8 +98,12 @@ export default function PortalShell({
         ? fill(dict.roleLine.manager, { assignment: dict.assignment[member.assignment] })
         : dict.roles.client;
 
+  const siteHeader = viewer.role === "client" && common ? <SiteHeader lang={lang} dict={common} /> : undefined;
+
   const sidebar = (
-    <div className="flex h-full flex-col overflow-y-auto px-4 pb-5 pt-6">
+    <div className={`flex h-full flex-col overflow-y-auto px-4 pb-5 ${siteHeader ? "pt-14 lg:pt-6" : "pt-6"}`}>
+      {/* The storefront header already shows the logo in the client area */}
+      {!siteHeader && (
       <Link href={home} className="block w-fit px-2">
         <span className="grid h-16 w-[5.25rem] place-items-center rounded-md bg-primary">
           <Image src="/logo.png" alt="" width={369} height={307} sizes="80px" preload className="h-[3.4rem] w-auto" />
@@ -102,8 +111,9 @@ export default function PortalShell({
         <span className="mt-4 block text-base font-bold leading-tight">WOW Quick Bites</span>
         <span className="mt-1 block text-[0.6875rem] text-muted-foreground">{dict.byline}</span>
       </Link>
+      )}
 
-      <p className="mt-5 rounded-lg bg-panel-muted px-3 py-3 text-[0.8125rem] leading-snug">{dict.workspace[viewer.role]}</p>
+      <p className={`${siteHeader ? "" : "mt-5 "}rounded-lg bg-panel-muted px-3 py-3 text-[0.8125rem] leading-snug`}>{dict.workspace[viewer.role]}</p>
 
       <NavMenu sections={sections} viewer={{ id: viewer.id, role: viewer.role, clientCode: viewer.clientCode }} label={dict.shell.mainNav} />
 
@@ -175,7 +185,7 @@ export default function PortalShell({
   );
 
   return (
-    <ShellFrame sidebar={sidebar} topbar={topbar} labels={{ open: dict.shell.openMenu, close: dict.shell.closeMenu }}>
+    <ShellFrame sidebar={sidebar} topbar={topbar} siteHeader={siteHeader} labels={{ open: dict.shell.openMenu, close: dict.shell.closeMenu }}>
       {children}
     </ShellFrame>
   );

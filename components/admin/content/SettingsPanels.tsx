@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ActionButton, ActionLink } from "@/components/portal/ui/Action";
+import BilingualField from "@/components/portal/ui/BilingualField";
 import { Input } from "@/components/portal/ui/Controls";
 import Note from "@/components/portal/ui/Note";
 import { Eyebrow, Panel } from "@/components/portal/ui/Panel";
@@ -27,9 +28,13 @@ export function BusinessPanel({ lang, viewerId, dict }: { lang: Locale; viewerId
   const [saved, setSaved] = useState(false);
   const owner = getStaff("rwasibo")?.name ?? "";
 
+  const editor = dict.staff.content.editor;
+  // Business texts in both languages at once, whatever the portal language
   const field = (key: "name" | "location" | "hours") => ({
-    value: editing![key][lang],
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) => setEditing({ ...editing!, [key]: { ...editing![key], [lang]: e.target.value } }),
+    value: editing![key],
+    onChange: (value: BusinessSettings[typeof key]) => setEditing({ ...editing!, [key]: value }),
+    labels: { same: editor.sameText, languages: editor.languages },
+    required: true,
   });
 
   return (
@@ -46,10 +51,10 @@ export function BusinessPanel({ lang, viewerId, dict }: { lang: Locale; viewerId
           }}
         >
           <p className="text-[0.8125rem] font-semibold">{t.editTitle}</p>
-          <Input label={t.name} required {...field("name")} />
+          <BilingualField label={t.name} {...field("name")} />
           <div className="grid gap-4 sm:grid-cols-2">
-            <Input label={t.location} required {...field("location")} />
-            <Input label={t.hours} required {...field("hours")} />
+            <BilingualField label={t.location} {...field("location")} />
+            <BilingualField label={t.hours} {...field("hours")} />
             <Input label={t.email} type="email" required value={editing.email} onChange={(e) => setEditing({ ...editing, email: e.target.value })} />
             <Input label={t.phone} type="tel" required value={editing.phone} onChange={(e) => setEditing({ ...editing, phone: e.target.value })} />
           </div>

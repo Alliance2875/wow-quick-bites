@@ -1,6 +1,6 @@
 export const account = {
   google: "Continue with Google",
-  googleSoon: "Google sign-in is coming soon.",
+  googleError: "Google sign-in did not complete. Try again or use your email.",
   or: "or",
   fields: {
     fullName: "Full name",
@@ -17,6 +17,11 @@ export const account = {
     exists: "An account already exists with this email. Sign in instead.",
     missing: "Fill in every field (password: at least 6 characters).",
     server: "Sign-in is unavailable right now. Please try again later.",
+    phone: "Enter a valid Rwandan mobile number (07X XXX XXXX).",
+    code: "This code is not correct. Check the email and try again.",
+    expired: "This step has expired. Please start again.",
+    tooMany: "Too many attempts. Request a new code.",
+    wait: "Please wait a few seconds before asking for another code.",
   },
   signIn: {
     metaTitle: "Sign in",
@@ -34,6 +39,27 @@ export const account = {
     submit: "Create account",
     pending: "Creating your account…",
     switch: "Already have an account? Sign in",
+  },
+  verify: {
+    metaTitle: "Verify your account",
+    title: "Verify Your Account",
+    text: "We’ve sent a 6-digit code to your email",
+    codeLabel: "6-digit verification code",
+    digit: "Digit {n} of 6",
+    submit: "Verify",
+    pending: "Verifying…",
+    noCode: "Didn’t receive the code?",
+    resend: "Resend the code",
+    resent: "A new code is on its way. Check your inbox.",
+    back: "Back to login",
+    devCode: "Development only — no email is sent yet. Your code is {code} (also in the server console).",
+    expiredTitle: "Your verification has expired",
+    expiredText: "For your security, codes are valid for 10 minutes. Create your account again to receive a new one.",
+    restart: "Create account again",
+  },
+  finishSignIn: {
+    metaTitle: "Signing in",
+    redirecting: "Signing you in…",
   },
   recovery: {
     metaTitle: "Password recovery",

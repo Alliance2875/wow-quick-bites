@@ -1,4 +1,5 @@
 import { business } from "@/data/business";
+import { getClient } from "@/data/clients";
 import { getMenuItem } from "@/data/menu";
 import type { OrderStage, PortalOrder } from "@/data/types";
 import { localize, type Locale } from "@/i18n/config";
@@ -35,6 +36,15 @@ export const itemsSummary = (order: PortalOrder, lang: Locale) =>
   orderLines(order)
     .map((line) => (line.quantity > 1 ? `${line.quantity} × ` : "") + localize(line.item.name, lang))
     .join(" + ");
+
+/** Groups the orders of one customer: the client code, or the phone number of a guest. */
+export const customerKey = (order: PortalOrder) => (order.guest ? `guest:${order.contact?.phone ?? order.id}` : order.clientCode);
+
+/** Name shown to staff: the one given at checkout, else the client account's name. */
+export const customerName = (order: PortalOrder) => order.contact?.name ?? getClient(order.clientCode)?.name ?? "";
+
+/** Phone the manager can call about the order. */
+export const customerPhone = (order: PortalOrder) => order.contact?.phone ?? getClient(order.clientCode)?.phone;
 
 export const newestFirst = (a: PortalOrder, b: PortalOrder) => Date.parse(b.placedAt) - Date.parse(a.placedAt);
 

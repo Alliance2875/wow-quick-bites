@@ -7,8 +7,19 @@ export const order: OrderDict = {
   dateFormat: "{day} à {time}",
   receiptNote:
     "Reçu d’envoi · Ce reçu correspond au moment de la commande, avant son acceptation par le gestionnaire. Consultez le suivi pour connaître le dernier statut.",
+  receiptNoteGuest: "Reçu d’envoi · Ce reçu correspond au moment de la commande, avant son acceptation par le gestionnaire. Conservez votre identifiant de commande.",
   receiptTitle: "Votre reçu · {id}",
   receiptMeta: "{items} · Prix habituels du menu · Montants en RWF",
+  guestNext: {
+    review: {
+      title: "Le gestionnaire examine votre commande",
+      text: "Le gestionnaire accepte votre commande et lance sa préparation. En cas de question, il vous appelle au {phone}.",
+    },
+    ready: {
+      title: "Nous vous appelons quand elle est prête",
+      text: "Gardez votre téléphone à portée de main : le gestionnaire appelle le {phone} lorsque votre commande est prête à retirer.",
+    },
+  },
   next: {
     title: "Les prochaines étapes",
     review: {
@@ -31,6 +42,9 @@ export const order: OrderDict = {
     clientCode: "Code client permanent",
     orderId: "Identifiant de commande",
     note: "Votre code client vous identifie pour tous vos achats. L’identifiant de commande correspond uniquement à cet achat.",
+    guest: "Commande invité · sans compte",
+    phone: "Téléphone",
+    guestNote: "Conservez votre identifiant de commande. Le gérant appelle le {phone} lorsque votre commande est prête.",
   },
   payment: {
     title: "Paiement et réception",

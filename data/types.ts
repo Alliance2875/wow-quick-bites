@@ -117,7 +117,12 @@ export type OrderStage = "new" | "accepted" | "preparing" | "ready" | "completed
 
 export type PortalOrder = {
   id: string;
+  /** Empty for guest orders (no account, so no permanent code) */
   clientCode: ClientCode;
+  /** Ordered without an account ("Continue without signing in"): name and phone only */
+  guest?: boolean;
+  /** Name and phone given at checkout (guests always; account orders placed on the site) */
+  contact?: { name: string; phone: string };
   /** Staff id of the manager in charge */
   managerId: string;
   /** ISO date, Kigali time */
