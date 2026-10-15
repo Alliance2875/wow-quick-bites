@@ -63,4 +63,5 @@ export const checkout: CheckoutDict = {
   },
   required: "Veuillez indiquer votre nom et votre numéro de téléphone.",
   invalidPhone: "Saisissez un numéro de mobile rwandais valide (07X XXX XXXX).",
+  orderFailed: "Impossible de passer votre commande. Veuillez réessayer.",
 };

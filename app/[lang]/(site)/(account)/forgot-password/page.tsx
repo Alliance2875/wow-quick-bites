@@ -11,8 +11,13 @@ export async function generateMetadata({ params }: PageProps<"/[lang]/forgot-pas
   return { title: dict.account.recovery.metaTitle };
 }
 
-export default async function ForgotPasswordPage({ params }: PageProps<"/[lang]/forgot-password">) {
+export default async function ForgotPasswordPage({
+  params,
+  searchParams,
+}: PageProps<"/[lang]/forgot-password">) {
   const { lang, dict } = await resolveLang(params);
+  const tokenParam = (await searchParams).token;
+  const token = Array.isArray(tokenParam) ? tokenParam[0] : tokenParam;
   const t = dict.account.recovery;
   const signInHref = localePath(lang, routes.signIn);
 
@@ -37,7 +42,7 @@ export default async function ForgotPasswordPage({ params }: PageProps<"/[lang]/
             <p className="mt-2 text-sm font-bold text-primary">{t.heroTagline}</p>
           </div>
         </div>
-        <ForgotPasswordFlow dict={t} fields={dict.account.fields} signInHref={signInHref} />
+        <ForgotPasswordFlow dict={t} fields={dict.account.fields} signInHref={signInHref} token={token} />
       </div>
     </Container>
   );

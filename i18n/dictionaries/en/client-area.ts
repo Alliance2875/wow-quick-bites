@@ -129,6 +129,7 @@ export const clientArea = {
   },
   order: {
     title: "Order {id}",
+    unavailable: "This order could not be loaded. Please try again.",
     subtitle: "Placed {date} at {time} · {fulfilment} · Managed by {manager}",
     back: "My orders",
     status: {
@@ -194,6 +195,7 @@ export const clientArea = {
   },
   notifications: {
     title: "Notifications",
+    mutationError: "The notification update failed. Please try again.",
     subtitle: "Order updates for {name} · {code}. Each update links to its own purchase.",
     markAll: "Mark all as read",
     filters: { all: "All updates", unread: "Unread" },

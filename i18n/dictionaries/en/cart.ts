@@ -11,6 +11,7 @@ export const cart = {
   },
   addMore: "Add more items",
   empty: "Your cart is empty.",
+  priceLoadError: "We couldn't load current menu prices. Please try again.",
   browseMenu: "Browse menu",
   itemsTitle: "Items in your cart",
   itemCount: { one: "{count} item", other: "{count} items" },

@@ -19,6 +19,7 @@ export default async function OrderQueuePage({ params, searchParams }: PageProps
 
   return (
     <OrderQueue
+      key={typeof selected === "string" ? selected : ""}
       lang={lang}
       viewer={{ id: viewer.id, role: viewer.role as "manager" | "superadmin", name: viewer.name }}
       dict={{ portal: dict.portal, staff: dict.staff }}

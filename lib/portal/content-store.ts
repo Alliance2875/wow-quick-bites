@@ -1,24 +1,21 @@
 "use client";
 
 import { useMemo } from "react";
-import { business } from "@/data/business";
-import { campaigns as sampleCampaigns } from "@/data/campaigns";
-import { contactCards } from "@/data/contact";
-import { menuItems } from "@/data/menu";
-import { promotions } from "@/data/promotions";
 import type { Campaign, MenuItem } from "@/data/types";
 import type { Localized } from "@/i18n/config";
-import { createStore } from "@/lib/create-store";
-
-// MOCK content workspace until the backend exists: menu items, campaigns and business details
-// edited in the portal, kept in this browser. "Publish" marks the change as published here;
-// with the backend it becomes PUT /menu/:id, PUT /campaigns/:id, PUT /business.
+import { adminApi, type AdminMenuItem } from "@/lib/redux/api/adminApi";
+import { store as reduxStore } from "@/lib/redux/store";
+import {
+  useGetAdminBusinessQuery,
+  useGetAdminCampaignsQuery,
+  useGetAdminMenuItemsQuery,
+} from "@/lib/redux/api/adminApi";
 
 export type ContentState = "published" | "draft";
-
 export type EditableItem = MenuItem & { available: boolean; state: ContentState; isDraftNew?: boolean };
 
 export type EditableCampaign = Campaign & {
+  promotionId: string;
   title: Localized;
   text: Localized;
   cta: Localized;
@@ -27,88 +24,162 @@ export type EditableCampaign = Campaign & {
   deleted?: boolean;
 };
 
-export type BusinessSettings = { name: Localized; location: Localized; hours: Localized; email: string; phone: string };
+export type BusinessSettings = { name: Localized; location: Localized; hours: Localized; email: string; phone: string; owner: string };
 
-type State = {
-  items: Record<string, Partial<EditableItem>>;
-  added: EditableItem[];
-  campaigns: Record<string, Partial<EditableCampaign>>;
-  addedCampaigns: EditableCampaign[];
-  business?: BusinessSettings;
-};
-
-const store = createStore<State>("wqb-content", { items: {}, added: [], campaigns: {}, addedCampaigns: [] });
+const toEditableItem = (item: AdminMenuItem): EditableItem => ({
+  ...item,
+  available: item.available,
+  state: item.state,
+});
 
 export function useMenuItems(): EditableItem[] {
-  const { items, added } = store.useValue();
-  return useMemo(
-    () => [
-      ...added.map((item) => ({ ...item, ...items[item.id] })),
-      ...menuItems.map((item) => ({ ...item, available: true, state: "published" as const, ...items[item.id] })),
-    ],
-    [items, added],
-  );
+  const { data } = useGetAdminMenuItemsQuery();
+  return useMemo(() => (data ?? []).filter((item) => !item.deleted).map(toEditableItem), [data]);
 }
 
-export function saveItem(item: EditableItem, state: ContentState) {
-  store.set((current) => {
-    const exists = current.added.some((a) => a.id === item.id) || menuItems.some((m) => m.id === item.id);
-    return exists
-      ? { ...current, items: { ...current.items, [item.id]: { ...item, state } } }
-      : { ...current, added: [{ ...item, state }, ...current.added] };
-  });
+export async function saveItem(item: EditableItem, state: ContentState): Promise<EditableItem> {
+  const payload: Partial<AdminMenuItem> = {
+    name: item.name,
+    description: item.description,
+    cartMeta: item.cartMeta,
+    price: item.price,
+    image: item.image,
+    imageId: item.imageId,
+    group: item.group,
+    section: item.section,
+    categories: item.categories,
+    tags: item.tags,
+    isNew: item.isNew,
+    optionGroups: item.optionGroups,
+    pairsWith: item.pairsWith,
+    available: item.available,
+  };
+
+  const saved = item.isDraftNew
+    ? await reduxStore.dispatch(adminApi.endpoints.createAdminMenuItem.initiate(payload)).unwrap()
+    : await reduxStore
+        .dispatch(adminApi.endpoints.updateAdminMenuItem.initiate({ slug: item.id, data: payload }))
+        .unwrap();
+  const published =
+    state === "published"
+      ? await reduxStore.dispatch(adminApi.endpoints.publishAdminMenuItem.initiate(saved.id)).unwrap()
+      : saved;
+  return toEditableItem(published);
+}
+
+function toEditableCampaign(campaign: Campaign): EditableCampaign {
+  const id = campaign.id ?? campaign.promotionId;
+  if (!id) throw new Error("The campaign response is missing its id.");
+  return {
+    ...campaign,
+    promotionId: id,
+    title: campaign.title ?? { en: "", fr: "" },
+    text: campaign.text ?? { en: "", fr: "" },
+    cta: campaign.cta ?? { en: "", fr: "" },
+    image: campaign.image ?? "",
+    paused: campaign.paused ?? campaign.status === "paused",
+    status: campaign.status === "paused" ? "published" : campaign.status,
+  };
 }
 
 export function useCampaigns(): EditableCampaign[] {
-  const { campaigns, addedCampaigns } = store.useValue();
-  return useMemo(
-    () =>
-      [
-        ...addedCampaigns,
-        ...sampleCampaigns.map((campaign) => {
-          const promotion = promotions.find((p) => p.id === campaign.promotionId)!;
-          return {
-            ...campaign,
-            title: promotion.title,
-            text: promotion.text,
-            cta: promotion.cta,
-            image: promotion.image,
-          };
-        }),
-      ]
-        .map((campaign) => ({ ...campaign, ...campaigns[campaign.promotionId] }))
-        .filter((campaign) => !campaign.deleted),
-    [campaigns, addedCampaigns],
-  );
+  const { data } = useGetAdminCampaignsQuery();
+  return useMemo(() => (data ?? []).map(toEditableCampaign), [data]);
 }
 
-export function saveCampaign(campaign: EditableCampaign) {
-  store.set((current) => {
-    const exists =
-      current.addedCampaigns.some((c) => c.promotionId === campaign.promotionId) ||
-      sampleCampaigns.some((c) => c.promotionId === campaign.promotionId);
-    return exists
-      ? { ...current, campaigns: { ...current.campaigns, [campaign.promotionId]: campaign } }
-      : { ...current, addedCampaigns: [campaign, ...current.addedCampaigns] };
-  });
+function campaignPayload(campaign: EditableCampaign): Partial<Campaign> {
+  return {
+    id: campaign.promotionId,
+    tag: campaign.tag,
+    placement: campaign.placement,
+    ctaCategory: campaign.ctaCategory,
+    title: campaign.title,
+    text: campaign.text,
+    cta: campaign.cta,
+    image: campaign.image,
+    imageId: campaign.imageId,
+    startsAt: campaign.startsAt,
+    endsAt: campaign.endsAt,
+    schedule: campaign.schedule,
+  };
 }
 
-export function patchCampaign(id: string, patch: Partial<EditableCampaign>) {
-  store.set((current) => ({ ...current, campaigns: { ...current.campaigns, [id]: { ...current.campaigns[id], ...patch } } }));
+export async function saveCampaign(campaign: EditableCampaign): Promise<EditableCampaign> {
+  const api = adminApi.endpoints;
+  const campaigns = api.getAdminCampaigns.select()(reduxStore.getState()).data ?? [];
+  const alreadyExists = campaigns.some((entry) => (entry.id ?? entry.promotionId) === campaign.promotionId);
+  const saved = alreadyExists
+    ? await reduxStore
+        .dispatch(
+          api.updateAdminCampaign.initiate({
+            slug: campaign.promotionId,
+            data: campaignPayload(campaign),
+          }),
+        )
+        .unwrap()
+    : await reduxStore.dispatch(api.createAdminCampaign.initiate(campaignPayload(campaign))).unwrap();
+  const shouldPublish = campaign.status !== "draft" && campaign.status !== "paused";
+  const result = shouldPublish
+    ? await reduxStore.dispatch(api.publishAdminCampaign.initiate(saved.id ?? campaign.promotionId)).unwrap()
+    : saved;
+  return toEditableCampaign(result);
 }
 
-const contact = (index: number) => contactCards[index].value;
-
-export const defaultBusiness: BusinessSettings = {
-  name: business.name,
-  location: contact(2),
-  hours: contact(3),
-  email: contact(1).en,
-  phone: contact(0).en,
-};
-
-export function useBusinessSettings(): BusinessSettings {
-  return store.useValue().business ?? defaultBusiness;
+export async function patchCampaign(id: string, patch: Partial<EditableCampaign>) {
+  const api = adminApi.endpoints;
+  if (patch.deleted) {
+    await reduxStore.dispatch(api.deleteAdminCampaign.initiate(id)).unwrap();
+    return;
+  }
+  if (patch.paused === true) {
+    await reduxStore.dispatch(api.pauseAdminCampaign.initiate(id)).unwrap();
+    return;
+  }
+  if (patch.paused === false) {
+    await reduxStore.dispatch(api.resumeAdminCampaign.initiate(id)).unwrap();
+    return;
+  }
+  if (patch.status === "draft" && patch.startsAt === undefined) {
+    await reduxStore.dispatch(api.cancelScheduleAdminCampaign.initiate(id)).unwrap();
+    return;
+  }
+  const existing = adminApi.endpoints.getAdminCampaigns
+    .select()(reduxStore.getState())
+    .data?.find((campaign) => (campaign.id ?? campaign.promotionId) === id);
+  if (!existing) throw new Error(`Campaign "${id}" is not available in the API cache.`);
+  const merged = { ...toEditableCampaign(existing), ...patch, promotionId: id };
+  await reduxStore
+    .dispatch(
+      api.updateAdminCampaign.initiate({
+        slug: id,
+        data: campaignPayload(merged),
+      }),
+    )
+    .unwrap();
 }
 
-export const saveBusinessSettings = (settings: BusinessSettings) => store.set((current) => ({ ...current, business: settings }));
+export function useBusinessSettings() {
+  const { data, isLoading, isError } = useGetAdminBusinessQuery();
+  const settings = data
+    ? {
+        name: data.name,
+        location: data.location ?? { en: "", fr: "" },
+        hours: data.hours ?? { en: "", fr: "" },
+        email: data.email ?? "",
+        phone: data.phone ?? "",
+        owner: data.owner ?? "",
+      }
+    : undefined;
+  return { settings, isLoading, isError };
+}
+
+export async function saveBusinessSettings(settings: BusinessSettings) {
+  const editable = {
+    name: settings.name,
+    location: settings.location,
+    hours: settings.hours,
+    email: settings.email,
+    phone: settings.phone,
+  };
+  await reduxStore.dispatch(adminApi.endpoints.updateAdminBusiness.initiate(editable)).unwrap();
+}

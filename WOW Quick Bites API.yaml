@@ -1,0 +1,5014 @@
+openapi: 3.0.3
+info:
+  title: WOW Quick Bites API
+  version: 2.0.0
+  description: 'API of the WOW Quick Bites website: catalogue, orders, client area
+    and staff portal. JSON keys are camelCase. Errors: `{ "error": { "code", "message",
+    "details" } }`. Authenticate with `Authorization: Bearer <access token>` from
+    `POST /api/v1/auth/sign-in`.'
+paths:
+  /api/v1/admin/audit/:
+    get:
+      operationId: admin_audit_retrieve
+      summary: Audit trail, newest first
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+        description: '`nextCursor` of the previous page'
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: 1–100, default 20
+      - in: query
+        name: scope
+        schema:
+          type: string
+          enum:
+          - access
+          - content
+          - orders
+      tags:
+      - Staff
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditPage'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+  /api/v1/admin/business/:
+    get:
+      operationId: admin_business_retrieve
+      summary: Business settings (portal)
+      tags:
+      - Content
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Business'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+    put:
+      operationId: admin_business_update
+      summary: Replace the business settings
+      tags:
+      - Content
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BusinessRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BusinessRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BusinessRequest'
+        required: true
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Business'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: validation_failed
+    patch:
+      operationId: admin_business_partial_update
+      summary: Update some business settings
+      tags:
+      - Content
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedBusinessRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedBusinessRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedBusinessRequest'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Business'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: validation_failed
+  /api/v1/admin/campaigns/:
+    get:
+      operationId: admin_campaigns_list
+      summary: All campaigns (portal)
+      tags:
+      - Content
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Campaign'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+    post:
+      operationId: admin_campaigns_create
+      summary: Create a campaign (draft)
+      tags:
+      - Content
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CampaignRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CampaignRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CampaignRequest'
+        required: true
+      security:
+      - bearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Campaign'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: validation_failed
+  /api/v1/admin/campaigns/{slug}/:
+    get:
+      operationId: admin_campaigns_retrieve
+      summary: One campaign
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - Content
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Campaign'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: not_found
+    patch:
+      operationId: admin_campaigns_partial_update
+      description: Editing a live (scheduled/published/paused) campaign also needs
+        `content:publish`.
+      summary: Edit a campaign
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - Content
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCampaignRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCampaignRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCampaignRequest'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Campaign'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: not_found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: validation_failed
+    delete:
+      operationId: admin_campaigns_destroy
+      summary: Delete a draft
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - Content
+      security:
+      - bearerAuth: []
+      responses:
+        '204':
+          description: No response body
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: not_found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: conflict / email_taken / invalid_transition / item_unavailable
+  /api/v1/admin/campaigns/{slug}/cancel-schedule/:
+    post:
+      operationId: admin_campaigns_cancel_schedule_create
+      summary: Cancel a schedule (back to draft)
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - Content
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Campaign'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: not_found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: conflict / email_taken / invalid_transition / item_unavailable
+  /api/v1/admin/campaigns/{slug}/pause/:
+    post:
+      operationId: admin_campaigns_pause_create
+      summary: Pause a campaign
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - Content
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Campaign'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: not_found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: conflict / email_taken / invalid_transition / item_unavailable
+  /api/v1/admin/campaigns/{slug}/publish/:
+    post:
+      operationId: admin_campaigns_publish_create
+      description: Becomes `scheduled` when `startsAt` is in the future, `published`
+        otherwise.
+      summary: Publish a campaign
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - Content
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Campaign'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: not_found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: conflict / email_taken / invalid_transition / item_unavailable
+  /api/v1/admin/campaigns/{slug}/resume/:
+    post:
+      operationId: admin_campaigns_resume_create
+      summary: Resume a paused campaign
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - Content
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Campaign'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: not_found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: conflict / email_taken / invalid_transition / item_unavailable
+  /api/v1/admin/invitations/:
+    post:
+      operationId: admin_invitations_create
+      description: 'Creates the account (status `invited`) and emails a link to `{FRONTEND_URL}/{lang}/accept-invitation?token=…`
+        (POST /auth/invitations/accept). Default access: orders only.'
+      summary: Invite a manager
+      tags:
+      - Staff
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvitationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/InvitationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/InvitationRequest'
+        required: true
+      security:
+      - bearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffMember'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: conflict / email_taken / invalid_transition / item_unavailable
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: validation_failed
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: email_unavailable
+  /api/v1/admin/managers/:
+    get:
+      operationId: admin_managers_list
+      summary: Manager directory
+      parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Name, email or assignment
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - active
+          - invited
+          - suspended
+      tags:
+      - Staff
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StaffMember'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+  /api/v1/admin/managers/{staff_id}/:
+    get:
+      operationId: admin_managers_retrieve
+      summary: One manager
+      parameters:
+      - in: path
+        name: staff_id
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - Staff
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffMember'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: not_found
+    patch:
+      operationId: admin_managers_partial_update
+      summary: Rename, change duty or assignment
+      parameters:
+      - in: path
+        name: staff_id
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - Staff
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedManagerUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedManagerUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedManagerUpdateRequest'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffMember'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: not_found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: conflict / email_taken / invalid_transition / item_unavailable
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: validation_failed
+  /api/v1/admin/managers/{staff_id}/grant/:
+    put:
+      operationId: admin_managers_grant_update
+      description: 'Scopes: food, drinks (edit menu items of that group), labels (NEW
+        badge), ads, publish. No `expiresAt` = until revoked.'
+      summary: Give temporary content rights (replaces the current grant)
+      parameters:
+      - in: path
+        name: staff_id
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - Staff
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContentGrantInputRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ContentGrantInputRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ContentGrantInputRequest'
+        required: true
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentGrant'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: not_found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: conflict / email_taken / invalid_transition / item_unavailable
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: validation_failed
+    delete:
+      operationId: admin_managers_grant_destroy
+      summary: Revoke the content rights
+      parameters:
+      - in: path
+        name: staff_id
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - Staff
+      security:
+      - bearerAuth: []
+      responses:
+        '204':
+          description: No response body
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: not_found
+  /api/v1/admin/managers/{staff_id}/reactivate/:
+    post:
+      operationId: admin_managers_reactivate_create
+      summary: Reactivate a suspended manager
+      parameters:
+      - in: path
+        name: staff_id
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - Staff
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffMember'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: not_found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: conflict / email_taken / invalid_transition / item_unavailable
+  /api/v1/admin/managers/{staff_id}/resend-invitation/:
+    post:
+      operationId: admin_managers_resend_invitation_create
+      summary: Send the invitation email again (new link)
+      parameters:
+      - in: path
+        name: staff_id
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - Staff
+      security:
+      - bearerAuth: []
+      responses:
+        '204':
+          description: No response body
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: not_found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: conflict / email_taken / invalid_transition / item_unavailable
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: email_unavailable
+  /api/v1/admin/managers/{staff_id}/suspend/:
+    post:
+      operationId: admin_managers_suspend_create
+      description: Refused at once on every request, signed out, assignment and grant
+        removed; active orders go to another on-duty manager (or stay unassigned).
+      summary: Suspend a manager
+      parameters:
+      - in: path
+        name: staff_id
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - Staff
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffMember'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: not_found
+  /api/v1/admin/menu/items/:
+    get:
+      operationId: admin_menu_items_list
+      summary: All items with their state (draft/published) and pending changes
+      parameters:
+      - in: query
+        name: category
+        schema:
+          type: string
+        description: Category id, e.g. `burgers`
+      - in: query
+        name: deleted
+        schema:
+          type: boolean
+        description: true = only deleted items
+      - in: query
+        name: group
+        schema:
+          type: string
+          enum:
+          - drinks
+          - food
+      - in: query
+        name: section
+        schema:
+          type: string
+        description: Drink section id, e.g. `mojitos`
+      tags:
+      - Content
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminMenuItem'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+    post:
+      operationId: admin_menu_items_create
+      summary: Create an item (saved as a draft)
+      tags:
+      - Content
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MenuItemInputRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MenuItemInputRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MenuItemInputRequest'
+        required: true
+      security:
+      - bearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminMenuItem'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: validation_failed
+  /api/v1/admin/menu/items/{slug}/:
+    get:
+      operationId: admin_menu_items_retrieve
+      summary: One item (portal)
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - Content
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminMenuItem'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: not_found
+    patch:
+      operationId: admin_menu_items_partial_update
+      description: 'A published item keeps its live version: the changes are saved
+        as its draft until POST …/publish. An item never published is edited directly
+        (it is still a draft).'
+      summary: Edit an item
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - Content
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedMenuItemInputRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedMenuItemInputRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedMenuItemInputRequest'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminMenuItem'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: not_found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: validation_failed
+    delete:
+      operationId: admin_menu_items_destroy
+      summary: Remove an item from the menu (can be restored)
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - Content
+      security:
+      - bearerAuth: []
+      responses:
+        '204':
+          description: No response body
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: not_found
+  /api/v1/admin/menu/items/{slug}/draft/:
+    delete:
+      operationId: admin_menu_items_draft_destroy
+      summary: Discard the pending changes of a published item
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - Content
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminMenuItem'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: not_found
+  /api/v1/admin/menu/items/{slug}/publish/:
+    post:
+      operationId: admin_menu_items_publish_create
+      summary: 'Publish an item: its pending changes go live together'
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - Content
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminMenuItem'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: not_found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: conflict / email_taken / invalid_transition / item_unavailable
+  /api/v1/admin/menu/items/{slug}/restore/:
+    post:
+      operationId: admin_menu_items_restore_create
+      summary: Restore a removed item
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - Content
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminMenuItem'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: not_found
+  /api/v1/admin/overview/:
+    get:
+      operationId: admin_overview_retrieve
+      summary: 'Store overview (register window: today and the previous days)'
+      tags:
+      - Staff
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Overview'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+  /api/v1/admin/uploads/:
+    post:
+      operationId: admin_uploads_create
+      description: 'Multipart field `file`: JPEG, PNG or WebP, 5 MB max. Resized to
+        1600 px max. Use the returned `imageId` in a menu item or a campaign.'
+      summary: Upload an image (menu photo, campaign visual)
+      tags:
+      - Content
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      security:
+      - bearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Upload'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: validation_failed
+  /api/v1/auth/google/:
+    post:
+      operationId: auth_google_create
+      description: The website runs the OAuth flow and sends the Google-verified email.
+        Requires the `X-Frontend-Secret` header. 200 = existing account, 201 = new
+        client account.
+      summary: Google sign-in (server-to-server, from the website)
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoogleSignInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GoogleSignInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GoogleSignInRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Auth'
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Auth'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: validation_failed
+  /api/v1/auth/invitations/accept/:
+    post:
+      operationId: auth_invitations_accept_create
+      description: The invitation email links to `{FRONTEND_URL}/{lang}/accept-invitation?token=…`
+        (valid 7 days).
+      summary: 'Accept a staff invitation: choose a password and sign in'
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvitationAcceptRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/InvitationAcceptRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/InvitationAcceptRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Auth'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: bad_request / invalid_code / invalid_or_expired_token
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: validation_failed
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: too_many_attempts
+  /api/v1/auth/me/:
+    get:
+      operationId: auth_me_retrieve
+      summary: The signed-in person
+      tags:
+      - Auth
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionUser'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+    patch:
+      operationId: auth_me_partial_update
+      summary: Update name and phone (the email is the sign-in identity)
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProfileRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedProfileRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedProfileRequest'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionUser'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: validation_failed
+  /api/v1/auth/password/change/:
+    post:
+      operationId: auth_password_change_create
+      description: Other sessions are signed out; the response carries new tokens
+        for this one.
+      summary: Change the password (signed in)
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordChangeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordChangeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordChangeRequest'
+        required: true
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Auth'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: validation_failed
+  /api/v1/auth/password/forgot/:
+    post:
+      operationId: auth_password_forgot_create
+      description: Always 202 (never reveals whether the email has an account). The
+        link opens `{FRONTEND_URL}/{lang}/forgot-password?token=…`, valid 1 hour.
+      summary: Email a password reset link
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EmailRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EmailRequestRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '202':
+          description: No response body
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: validation_failed
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: too_many_attempts
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: email_unavailable
+  /api/v1/auth/password/reset/:
+    post:
+      operationId: auth_password_reset_create
+      description: 'Endpoints used before signing in: no token needed, limited per
+        visitor.'
+      summary: Choose a new password with the emailed token (signs out everywhere)
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '204':
+          description: No response body
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: bad_request / invalid_code / invalid_or_expired_token
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: validation_failed
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: too_many_attempts
+  /api/v1/auth/refresh/:
+    post:
+      operationId: auth_refresh_create
+      description: 'The refresh token is rotated: keep the new `refresh`, the old
+        one stops working.'
+      summary: New access token
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+  /api/v1/auth/sign-in/:
+    post:
+      operationId: auth_sign_in_create
+      description: 'Endpoints used before signing in: no token needed, limited per
+        visitor.'
+      summary: Sign in with email and password
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SignInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SignInRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Auth'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: validation_failed
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: too_many_attempts
+  /api/v1/auth/sign-out/:
+    post:
+      operationId: auth_sign_out_create
+      description: 'Endpoints used before signing in: no token needed, limited per
+        visitor.'
+      summary: Sign out (revokes the refresh token)
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /api/v1/auth/sign-up/:
+    post:
+      operationId: auth_sign_up_create
+      description: 'Nothing is created yet: the account exists once the code is verified
+        (POST /auth/verify-email).'
+      summary: 'Sign up (client): emails a 6-digit code'
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignUpRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SignUpRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SignUpRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PendingVerification'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: conflict / email_taken / invalid_transition / item_unavailable
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: validation_failed
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: too_many_attempts
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: email_unavailable
+  /api/v1/auth/verify-email/:
+    post:
+      operationId: auth_verify_email_create
+      description: 'Codes are valid 10 minutes, 5 attempts. `invalid_code` details:
+        `{attemptsLeft}`.'
+      summary: 'Verify the email code: creates the client account and signs in'
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Auth'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: bad_request / invalid_code / invalid_or_expired_token
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: conflict / email_taken / invalid_transition / item_unavailable
+        '410':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: code_expired
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: validation_failed
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: too_many_attempts
+  /api/v1/auth/verify-email/resend/:
+    post:
+      operationId: auth_verify_email_resend_create
+      description: At most one code every 30 seconds (`429` with `details.retryAfter`).
+        Always 202 otherwise.
+      summary: Send a new email code
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EmailRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EmailRequestRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '202':
+          description: No response body
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: validation_failed
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: too_many_attempts
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: email_unavailable
+  /api/v1/business/:
+    get:
+      operationId: business_retrieve
+      summary: Business details, contact and fees (footer, contact page, checkout)
+      tags:
+      - Catalogue
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Business'
+          description: ''
+  /api/v1/me/:
+    get:
+      operationId: me_retrieve
+      summary: The signed-in person
+      tags:
+      - Auth
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionUser'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+    patch:
+      operationId: me_partial_update
+      summary: Update name and phone (the email is the sign-in identity)
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProfileRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedProfileRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedProfileRequest'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionUser'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: validation_failed
+  /api/v1/me/notifications/:
+    get:
+      operationId: me_notifications_list
+      summary: My order updates, newest first
+      parameters:
+      - in: query
+        name: unread
+        schema:
+          type: boolean
+        description: true = unread only
+      tags:
+      - Notifications
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ClientNotification'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+  /api/v1/me/notifications/read/:
+    post:
+      operationId: me_notifications_read_create
+      summary: 'Mark notifications as read: `{ids: [...]}` or `{all: true}`'
+      tags:
+      - Notifications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MarkReadRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MarkReadRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MarkReadRequest'
+      security:
+      - bearerAuth: []
+      responses:
+        '204':
+          description: No response body
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: validation_failed
+  /api/v1/me/orders/:
+    get:
+      operationId: me_orders_list
+      summary: My orders, newest first
+      parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Order id, e.g. ORD-10
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - active
+          - cancelled
+          - completed
+      tags:
+      - Orders
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+  /api/v1/me/orders/{order_id}/:
+    get:
+      operationId: me_orders_retrieve
+      summary: One of my orders (404 when it is not mine)
+      parameters:
+      - in: path
+        name: order_id
+        schema:
+          type: string
+          pattern: ^[A-Za-z]+-\d+$
+        required: true
+      tags:
+      - Orders
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: not_found
+  /api/v1/menu/:
+    get:
+      operationId: menu_retrieve
+      description: 'Everything the menu pages need: categories, drink sections, tags,
+        option groups and items.'
+      summary: The whole catalogue in one call
+      tags:
+      - Auth
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Catalogue'
+          description: ''
+  /api/v1/menu/categories/:
+    get:
+      operationId: menu_categories_list
+      description: 'Read-only catalogue: no token, cacheable.'
+      summary: Menu categories
+      tags:
+      - Auth
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+          description: ''
+  /api/v1/menu/drink-sections/:
+    get:
+      operationId: menu_drink_sections_list
+      description: 'Read-only catalogue: no token, cacheable.'
+      summary: Sections of the drinks page
+      tags:
+      - Auth
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DrinkSection'
+          description: ''
+  /api/v1/menu/items/:
+    get:
+      operationId: menu_items_list
+      description: 'Read-only catalogue: no token, cacheable.'
+      summary: Menu items
+      parameters:
+      - in: query
+        name: category
+        schema:
+          type: string
+        description: Category id, e.g. `burgers`
+      - in: query
+        name: group
+        schema:
+          type: string
+          enum:
+          - drinks
+          - food
+      - in: query
+        name: section
+        schema:
+          type: string
+        description: Drink section id, e.g. `mojitos`
+      tags:
+      - Auth
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MenuItem'
+          description: ''
+  /api/v1/menu/items/{slug}/:
+    get:
+      operationId: menu_items_retrieve
+      description: 'Read-only catalogue: no token, cacheable.'
+      summary: One menu item
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - Auth
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuItem'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: not_found
+  /api/v1/menu/option-groups/:
+    get:
+      operationId: menu_option_groups_retrieve
+      description: 'Read-only catalogue: no token, cacheable.'
+      summary: Customisation groups, by id (only available choices)
+      tags:
+      - Auth
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  $ref: '#/components/schemas/OptionGroup'
+          description: ''
+  /api/v1/menu/tags/:
+    get:
+      operationId: menu_tags_retrieve
+      description: 'Read-only catalogue: no token, cacheable.'
+      summary: Labels shown on dish cards, by key
+      tags:
+      - Auth
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties:
+                    en:
+                      type: string
+                    fr:
+                      type: string
+                  required:
+                  - en
+                  - fr
+          description: ''
+  /api/v1/orders/:
+    get:
+      operationId: orders_list
+      description: 'POST: checkout (client or guest). GET: the register queue (staff).'
+      summary: Register queue (staff)
+      parameters:
+      - in: query
+        name: guest
+        schema:
+          type: boolean
+      - in: query
+        name: managerId
+        schema:
+          type: string
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Order id, client code, name or phone
+      - in: query
+        name: since
+        schema:
+          type: string
+        description: 'ISO date. Default: start of the register window (3 days).'
+      - in: query
+        name: stage
+        schema:
+          type: string
+        description: One stage or several, comma separated. `active` = not finished.
+      tags:
+      - Register
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StaffOrder'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: validation_failed
+    post:
+      operationId: orders_create
+      description: The server recomputes every price from the menu. Guests send `contact.name`
+        and `contact.phone`. `409 item_unavailable` lists `details.itemIds`.
+      summary: Place an order (signed-in client, or guest without a token)
+      tags:
+      - Register
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaceOrderRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PlaceOrderRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PlaceOrderRequest'
+        required: true
+      security:
+      - bearerAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderEnvelope'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: conflict / email_taken / invalid_transition / item_unavailable
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: validation_failed
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: too_many_attempts
+  /api/v1/orders/{order_id}/:
+    get:
+      operationId: orders_retrieve
+      summary: One order (staff)
+      parameters:
+      - in: path
+        name: order_id
+        schema:
+          type: string
+          pattern: ^[A-Za-z]+-\d+$
+        required: true
+      tags:
+      - Register
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffOrder'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: not_found
+  /api/v1/orders/{order_id}/assign/:
+    post:
+      operationId: orders_assign_create
+      summary: Give the order to another manager (superadmin)
+      parameters:
+      - in: path
+        name: order_id
+        schema:
+          type: string
+          pattern: ^[A-Za-z]+-\d+$
+        required: true
+      tags:
+      - Register
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AssignRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AssignRequest'
+        required: true
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffOrderEnvelope'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: not_found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: validation_failed
+  /api/v1/orders/{order_id}/payment/:
+    post:
+      operationId: orders_payment_create
+      summary: Confirm the payment (Mobile Money checked by staff)
+      parameters:
+      - in: path
+        name: order_id
+        schema:
+          type: string
+          pattern: ^[A-Za-z]+-\d+$
+        required: true
+      tags:
+      - Register
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PaymentUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PaymentUpdateRequest'
+        required: true
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffOrderEnvelope'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: not_found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: conflict / email_taken / invalid_transition / item_unavailable
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: validation_failed
+  /api/v1/orders/{order_id}/transition/:
+    post:
+      operationId: orders_transition_create
+      description: new → accepted → preparing → ready → completed; new|accepted →
+        cancelled. Completing a pay-on-pickup order marks it paid; cancelling marks
+        it not charged. Notifies the client and records an audit event.
+      summary: Move an order to its next stage
+      parameters:
+      - in: path
+        name: order_id
+        schema:
+          type: string
+          pattern: ^[A-Za-z]+-\d+$
+        required: true
+      tags:
+      - Register
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransitionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TransitionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TransitionRequest'
+        required: true
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffOrderEnvelope'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unauthenticated / invalid_credentials
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: forbidden / account_suspended / not_assigned / staff_password_only
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: not_found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: conflict / email_taken / invalid_transition / item_unavailable
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: validation_failed
+  /api/v1/promotions/:
+    get:
+      operationId: promotions_list
+      summary: Homepage promotions shown right now
+      parameters:
+      - in: query
+        name: placement
+        schema:
+          type: string
+          enum:
+          - home-hero
+          - home-offers
+      tags:
+      - Catalogue
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Promotion'
+          description: ''
+components:
+  schemas:
+    AdminMenuItem:
+      type: object
+      description: 'An item in the portal: the live values, its state and the pending
+        changes.'
+      properties:
+        id:
+          type: string
+        name:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+        description:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+        cartMeta:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+          nullable: true
+        price:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: RWF
+        image:
+          type: string
+          description: Absolute URL, or a path served by the website.
+          maxLength: 500
+        group:
+          $ref: '#/components/schemas/GroupEnum'
+        section:
+          type: string
+          readOnly: true
+        categories:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        tags:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        isNew:
+          type: boolean
+        available:
+          type: boolean
+        optionGroups:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        pairsWith:
+          type: string
+          readOnly: true
+        state:
+          type: string
+          readOnly: true
+        draft:
+          type: object
+          additionalProperties: {}
+          nullable: true
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        deleted:
+          type: boolean
+          readOnly: true
+      required:
+      - available
+      - categories
+      - deleted
+      - description
+      - draft
+      - id
+      - name
+      - optionGroups
+      - pairsWith
+      - price
+      - section
+      - state
+      - tags
+      - updatedAt
+    AssignRequest:
+      type: object
+      properties:
+        managerId:
+          type: string
+          minLength: 1
+          description: Staff id of the manager.
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - managerId
+    AssignmentEnum:
+      enum:
+      - pickup-register
+      - backup
+      - none
+      type: string
+      description: |-
+        * `pickup-register` - Pickup register
+        * `backup` - Backup
+        * `none` - None
+    AuditEvent:
+      type: object
+      properties:
+        id:
+          type: string
+        at:
+          type: string
+          format: date-time
+        actorId:
+          type: string
+          readOnly: true
+          description: Staff id, or "system".
+        scope:
+          $ref: '#/components/schemas/ScopeEnum'
+        targetId:
+          type: string
+          nullable: true
+          readOnly: true
+        type:
+          type: string
+          maxLength: 40
+        data: {}
+        text:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+      required:
+      - actorId
+      - at
+      - id
+      - scope
+      - targetId
+      - text
+      - type
+    AuditPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditEvent'
+        nextCursor:
+          type: string
+          nullable: true
+      required:
+      - items
+      - nextCursor
+    Auth:
+      type: object
+      description: Response of every successful sign-in.
+      properties:
+        access:
+          type: string
+          description: 'Access token, send it as `Authorization: Bearer <access>`.'
+        refresh:
+          type: string
+          description: Refresh token, exchange it at POST /auth/refresh.
+        user:
+          $ref: '#/components/schemas/SessionUser'
+      required:
+      - access
+      - refresh
+      - user
+    Business:
+      type: object
+      description: GET /business (public) and PUT/PATCH /admin/business.
+      properties:
+        name:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+        owner:
+          type: string
+          maxLength: 120
+        location:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+          nullable: true
+        hours:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+          nullable: true
+        email:
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        phone:
+          type: string
+          maxLength: 30
+        socials:
+          type: array
+          items:
+            $ref: '#/components/schemas/SocialLink'
+        fees:
+          $ref: '#/components/schemas/Fees'
+        queueWindowDays:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          description: Days shown in the register queue.
+      required:
+      - name
+    BusinessRequest:
+      type: object
+      description: GET /business (public) and PUT/PATCH /admin/business.
+      properties:
+        name:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+        owner:
+          type: string
+          maxLength: 120
+        location:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+          nullable: true
+        hours:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+          nullable: true
+        email:
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        phone:
+          type: string
+          maxLength: 30
+        socials:
+          type: array
+          items:
+            $ref: '#/components/schemas/SocialLinkRequest'
+        fees:
+          $ref: '#/components/schemas/FeesRequest'
+        queueWindowDays:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          description: Days shown in the register queue.
+      required:
+      - name
+    Campaign:
+      type: object
+      description: A campaign in the portal (type Campaign), also used to create and
+        edit it.
+      properties:
+        id:
+          type: string
+          maxLength: 80
+          pattern: ^[-a-zA-Z0-9_]+$
+        status:
+          type: string
+          readOnly: true
+        tag:
+          $ref: '#/components/schemas/TagEnum'
+        placement:
+          $ref: '#/components/schemas/PlacementEnum'
+        tone:
+          $ref: '#/components/schemas/ToneEnum'
+        kicker:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+          nullable: true
+        title:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+        text:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+          nullable: true
+        cta:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+          nullable: true
+        highlight:
+          type: object
+          nullable: true
+          properties:
+            label:
+              type: object
+              properties:
+                en:
+                  type: string
+                fr:
+                  type: string
+              required:
+              - en
+              - fr
+            value:
+              type: object
+              properties:
+                en:
+                  type: string
+                fr:
+                  type: string
+              required:
+              - en
+              - fr
+            labelFirst:
+              type: boolean
+        schedule:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+          nullable: true
+        ctaCategory:
+          type: string
+          nullable: true
+        image:
+          type: string
+          maxLength: 500
+        imageId:
+          type: string
+        href:
+          type: string
+          maxLength: 300
+        link:
+          type: string
+          readOnly: true
+          description: Where the button leads (href, or the menu category).
+        startsAt:
+          type: string
+          format: date-time
+          nullable: true
+        endsAt:
+          type: string
+          format: date-time
+          nullable: true
+        displayOrder:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - link
+      - status
+      - title
+      - updatedAt
+    CampaignRequest:
+      type: object
+      description: A campaign in the portal (type Campaign), also used to create and
+        edit it.
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 80
+          pattern: ^[-a-zA-Z0-9_]+$
+        tag:
+          $ref: '#/components/schemas/TagEnum'
+        placement:
+          $ref: '#/components/schemas/PlacementEnum'
+        tone:
+          $ref: '#/components/schemas/ToneEnum'
+        kicker:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+          nullable: true
+        title:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+        text:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+          nullable: true
+        cta:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+          nullable: true
+        highlight:
+          type: object
+          nullable: true
+          properties:
+            label:
+              type: object
+              properties:
+                en:
+                  type: string
+                fr:
+                  type: string
+              required:
+              - en
+              - fr
+            value:
+              type: object
+              properties:
+                en:
+                  type: string
+                fr:
+                  type: string
+              required:
+              - en
+              - fr
+            labelFirst:
+              type: boolean
+        schedule:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+          nullable: true
+        ctaCategory:
+          type: string
+          minLength: 1
+          nullable: true
+        image:
+          type: string
+          maxLength: 500
+        imageId:
+          type: string
+        href:
+          type: string
+          maxLength: 300
+        startsAt:
+          type: string
+          format: date-time
+          nullable: true
+        endsAt:
+          type: string
+          format: date-time
+          nullable: true
+        displayOrder:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+      required:
+      - title
+    CartLineRequest:
+      type: object
+      properties:
+        itemId:
+          type: string
+          minLength: 1
+          maxLength: 80
+          pattern: ^[-a-zA-Z0-9_]+$
+        quantity:
+          type: integer
+          maximum: 99
+          minimum: 1
+        choices:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            pattern: ^[-a-zA-Z0-9_]+$
+          maxItems: 30
+        note:
+          type: string
+          default: ''
+          maxLength: 200
+      required:
+      - itemId
+      - quantity
+    Catalogue:
+      type: object
+      properties:
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+        drinkSections:
+          type: array
+          items:
+            $ref: '#/components/schemas/DrinkSection'
+        tags:
+          type: object
+          additionalProperties: {}
+        optionGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/OptionGroup'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MenuItem'
+      required:
+      - categories
+      - drinkSections
+      - items
+      - optionGroups
+      - tags
+    Category:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+        icon:
+          type: string
+          description: Icon name used by the website.
+          maxLength: 40
+      required:
+      - id
+      - name
+    ClientNotification:
+      type: object
+      properties:
+        id:
+          type: string
+        clientCode:
+          type: string
+        orderId:
+          type: string
+        stage:
+          type: string
+          maxLength: 9
+        title:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+        text:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+        at:
+          type: string
+          format: date-time
+        read:
+          type: boolean
+          readOnly: true
+      required:
+      - at
+      - clientCode
+      - id
+      - orderId
+      - read
+      - stage
+      - text
+      - title
+    ContactRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        phone:
+          type: string
+          minLength: 1
+          maxLength: 20
+        email:
+          oneOf:
+          - type: string
+            format: email
+          - type: string
+            maxLength: 0
+    ContentGrant:
+      type: object
+      properties:
+        grantedBy:
+          type: string
+          readOnly: true
+        scopes: {}
+        startsAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - grantedBy
+    ContentGrantInputRequest:
+      type: object
+      properties:
+        scopes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScopesEnum'
+          minItems: 1
+        startsAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - scopes
+    DrinkSection:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+        note:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+          nullable: true
+      required:
+      - id
+      - name
+    DutyEnum:
+      enum:
+      - 'on'
+      - 'off'
+      type: string
+      description: |-
+        * `on` - On duty
+        * `off` - Off duty
+    EmailRequestRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+        lang:
+          allOf:
+          - $ref: '#/components/schemas/LangEnum'
+          default: en
+          description: |-
+            Language of the email.
+
+            * `en` - en
+            * `fr` - fr
+      required:
+      - email
+    Error:
+      type: object
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorBody'
+      required:
+      - error
+    ErrorBody:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: {}
+      required:
+      - code
+      - details
+      - message
+    Fees:
+      type: object
+      properties:
+        service:
+          type: integer
+          minimum: 0
+        delivery:
+          type: integer
+          minimum: 0
+      required:
+      - delivery
+      - service
+    FeesRequest:
+      type: object
+      properties:
+        service:
+          type: integer
+          minimum: 0
+        delivery:
+          type: integer
+          minimum: 0
+      required:
+      - delivery
+      - service
+    FulfilmentEnum:
+      enum:
+      - pickup
+      - delivery
+      type: string
+      description: |-
+        * `pickup` - Pickup
+        * `delivery` - Delivery
+    GoogleSignInRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+          description: Email verified by Google.
+        name:
+          type: string
+          maxLength: 120
+      required:
+      - email
+    GroupEnum:
+      enum:
+      - food
+      - drinks
+      type: string
+      description: |-
+        * `food` - Food
+        * `drinks` - Drinks
+    InvitationAcceptRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+          maxLength: 128
+      required:
+      - password
+      - token
+    InvitationRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        email:
+          type: string
+          format: email
+          minLength: 1
+        assignment:
+          allOf:
+          - $ref: '#/components/schemas/AssignmentEnum'
+          default: none
+        lang:
+          allOf:
+          - $ref: '#/components/schemas/LangEnum'
+          default: en
+          description: |-
+            Language of the email.
+
+            * `en` - en
+            * `fr` - fr
+      required:
+      - email
+      - name
+    KindEnum:
+      enum:
+      - add
+      - remove
+      type: string
+      description: |-
+        * `add` - Add
+        * `remove` - Remove
+    LangEnum:
+      enum:
+      - en
+      - fr
+      type: string
+      description: |-
+        * `en` - en
+        * `fr` - fr
+    MarkReadRequest:
+      type: object
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        all:
+          type: boolean
+          default: false
+    MenuItem:
+      type: object
+      description: A dish or drink as the website shows it (type MenuItem).
+      properties:
+        id:
+          type: string
+        name:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+        description:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+        cartMeta:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+          nullable: true
+        price:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: RWF
+        image:
+          type: string
+          description: Absolute URL, or a path served by the website.
+          maxLength: 500
+        group:
+          $ref: '#/components/schemas/GroupEnum'
+        section:
+          type: string
+          readOnly: true
+        categories:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        tags:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        isNew:
+          type: boolean
+        available:
+          type: boolean
+        optionGroups:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        pairsWith:
+          type: string
+          readOnly: true
+      required:
+      - available
+      - categories
+      - description
+      - id
+      - name
+      - optionGroups
+      - pairsWith
+      - price
+      - section
+      - tags
+    MenuItemInputRequest:
+      type: object
+      description: |-
+        MenuItemInput. Validated data is stored as is in `MenuItem.draft` (plain JSON: column names,
+        related objects by id), then applied by menu.services.apply_changes().
+      properties:
+        id:
+          type: string
+          minLength: 1
+          description: URL slug, created from the English name when omitted (create
+            only).
+          maxLength: 80
+          pattern: ^[-a-zA-Z0-9_]+$
+        name:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+        description:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+          nullable: true
+        cartMeta:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+          nullable: true
+        price:
+          type: integer
+          maximum: 10000000
+          minimum: 0
+        group:
+          $ref: '#/components/schemas/GroupEnum'
+        section:
+          type: string
+          nullable: true
+          minLength: 1
+          pattern: ^[-a-zA-Z0-9_]+$
+        categories:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            pattern: ^[-a-zA-Z0-9_]+$
+        tags:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            pattern: ^[-a-zA-Z0-9_]+$
+        optionGroups:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            pattern: ^[-a-zA-Z0-9_]+$
+        pairsWith:
+          type: string
+          nullable: true
+          minLength: 1
+          pattern: ^[-a-zA-Z0-9_]+$
+        isNew:
+          type: boolean
+        available:
+          type: boolean
+        image:
+          type: string
+          description: Image URL. Prefer imageId after POST /admin/uploads.
+          maxLength: 500
+        imageId:
+          type: string
+          format: uuid
+          writeOnly: true
+      required:
+      - group
+      - name
+      - price
+    OptionGroup:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+        hint:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+          nullable: true
+        kind:
+          $ref: '#/components/schemas/KindEnum'
+        required:
+          type: boolean
+          description: At least one choice must be picked.
+        max:
+          type: integer
+          nullable: true
+        choices:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          readOnly: true
+      required:
+      - choices
+      - id
+      - max
+      - name
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+        clientCode:
+          type: string
+          readOnly: true
+          description: '"WQB001A", empty for guest orders.'
+        guest:
+          type: boolean
+          description: Placed without an account (name and phone only).
+        contact:
+          $ref: '#/components/schemas/OrderContact'
+        clientName:
+          type: string
+        managerId:
+          type: string
+          nullable: true
+          readOnly: true
+        managerName:
+          type: string
+          nullable: true
+          readOnly: true
+        placedAt:
+          type: string
+          format: date-time
+        fulfilment:
+          $ref: '#/components/schemas/FulfilmentEnum'
+        address:
+          type: string
+          nullable: true
+          readOnly: true
+        payment:
+          $ref: '#/components/schemas/PaymentEnum'
+        paymentStatus:
+          $ref: '#/components/schemas/PaymentStatusEnum'
+        stage:
+          $ref: '#/components/schemas/OrderStage'
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderLine'
+        subtotal:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        fees:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        total:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        history:
+          description: 'When each stage was reached: {"new": "2026-10-06T12:18:00+02:00"}'
+        notes:
+          type: string
+          nullable: true
+          readOnly: true
+      required:
+      - address
+      - clientCode
+      - clientName
+      - contact
+      - fulfilment
+      - id
+      - lines
+      - managerId
+      - managerName
+      - notes
+      - payment
+      - subtotal
+      - total
+    OrderContact:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+      required:
+      - name
+      - phone
+    OrderEnvelope:
+      type: object
+      properties:
+        order:
+          $ref: '#/components/schemas/Order'
+      required:
+      - order
+    OrderLine:
+      type: object
+      properties:
+        itemId:
+          type: string
+        quantity:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        choices:
+          description: Option choice ids
+        options:
+          description: '[{"id", "name": {"en", "fr"}, "price"}]'
+        note:
+          type: string
+          nullable: true
+          readOnly: true
+        name:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+        unitPrice:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: Item price + choices, at order time (RWF)
+        total:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+      required:
+      - itemId
+      - name
+      - note
+      - options
+      - quantity
+      - total
+      - unitPrice
+    OrderStage:
+      enum:
+      - new
+      - accepted
+      - preparing
+      - ready
+      - completed
+      - cancelled
+      type: string
+      description: |-
+        * `new` - New
+        * `accepted` - Accepted
+        * `preparing` - Preparing
+        * `ready` - Ready
+        * `completed` - Completed
+        * `cancelled` - Cancelled
+    Overview:
+      type: object
+      properties:
+        orders:
+          type: integer
+          description: Orders in the register window (today and the previous days).
+        ordersToday:
+          type: integer
+        active:
+          type: object
+          additionalProperties:
+            type: integer
+          description: Count per stage, in the window.
+        activeOrders:
+          type: integer
+        pendingPayments:
+          type: integer
+        completedValue:
+          type: integer
+          description: RWF of completed orders in the window.
+        completedCount:
+          type: integer
+        managers:
+          type: object
+          additionalProperties:
+            type: integer
+      required:
+      - active
+      - activeOrders
+      - completedCount
+      - completedValue
+      - managers
+      - orders
+      - ordersToday
+      - pendingPayments
+    PasswordChangeRequest:
+      type: object
+      properties:
+        currentPassword:
+          type: string
+          minLength: 1
+        newPassword:
+          type: string
+          minLength: 1
+          maxLength: 128
+      required:
+      - currentPassword
+      - newPassword
+    PasswordResetRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+          maxLength: 128
+      required:
+      - password
+      - token
+    PatchedBusinessRequest:
+      type: object
+      description: GET /business (public) and PUT/PATCH /admin/business.
+      properties:
+        name:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+        owner:
+          type: string
+          maxLength: 120
+        location:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+          nullable: true
+        hours:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+          nullable: true
+        email:
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        phone:
+          type: string
+          maxLength: 30
+        socials:
+          type: array
+          items:
+            $ref: '#/components/schemas/SocialLinkRequest'
+        fees:
+          $ref: '#/components/schemas/FeesRequest'
+        queueWindowDays:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          description: Days shown in the register queue.
+    PatchedCampaignRequest:
+      type: object
+      description: A campaign in the portal (type Campaign), also used to create and
+        edit it.
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 80
+          pattern: ^[-a-zA-Z0-9_]+$
+        tag:
+          $ref: '#/components/schemas/TagEnum'
+        placement:
+          $ref: '#/components/schemas/PlacementEnum'
+        tone:
+          $ref: '#/components/schemas/ToneEnum'
+        kicker:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+          nullable: true
+        title:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+        text:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+          nullable: true
+        cta:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+          nullable: true
+        highlight:
+          type: object
+          nullable: true
+          properties:
+            label:
+              type: object
+              properties:
+                en:
+                  type: string
+                fr:
+                  type: string
+              required:
+              - en
+              - fr
+            value:
+              type: object
+              properties:
+                en:
+                  type: string
+                fr:
+                  type: string
+              required:
+              - en
+              - fr
+            labelFirst:
+              type: boolean
+        schedule:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+          nullable: true
+        ctaCategory:
+          type: string
+          minLength: 1
+          nullable: true
+        image:
+          type: string
+          maxLength: 500
+        imageId:
+          type: string
+        href:
+          type: string
+          maxLength: 300
+        startsAt:
+          type: string
+          format: date-time
+          nullable: true
+        endsAt:
+          type: string
+          format: date-time
+          nullable: true
+        displayOrder:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+    PatchedManagerUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        duty:
+          $ref: '#/components/schemas/DutyEnum'
+        assignment:
+          $ref: '#/components/schemas/AssignmentEnum'
+    PatchedMenuItemInputRequest:
+      type: object
+      description: |-
+        MenuItemInput. Validated data is stored as is in `MenuItem.draft` (plain JSON: column names,
+        related objects by id), then applied by menu.services.apply_changes().
+      properties:
+        id:
+          type: string
+          minLength: 1
+          description: URL slug, created from the English name when omitted (create
+            only).
+          maxLength: 80
+          pattern: ^[-a-zA-Z0-9_]+$
+        name:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+        description:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+          nullable: true
+        cartMeta:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+          nullable: true
+        price:
+          type: integer
+          maximum: 10000000
+          minimum: 0
+        group:
+          $ref: '#/components/schemas/GroupEnum'
+        section:
+          type: string
+          nullable: true
+          minLength: 1
+          pattern: ^[-a-zA-Z0-9_]+$
+        categories:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            pattern: ^[-a-zA-Z0-9_]+$
+        tags:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            pattern: ^[-a-zA-Z0-9_]+$
+        optionGroups:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            pattern: ^[-a-zA-Z0-9_]+$
+        pairsWith:
+          type: string
+          nullable: true
+          minLength: 1
+          pattern: ^[-a-zA-Z0-9_]+$
+        isNew:
+          type: boolean
+        available:
+          type: boolean
+        image:
+          type: string
+          description: Image URL. Prefer imageId after POST /admin/uploads.
+          maxLength: 500
+        imageId:
+          type: string
+          format: uuid
+          writeOnly: true
+    PatchedProfileRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        phone:
+          type: string
+          minLength: 1
+          maxLength: 20
+    PaymentEnum:
+      enum:
+      - pay-on-pickup
+      - mtn-momo
+      - airtel-money
+      type: string
+      description: |-
+        * `pay-on-pickup` - Pay On Pickup
+        * `mtn-momo` - Mtn Momo
+        * `airtel-money` - Airtel Money
+    PaymentStatusEnum:
+      enum:
+      - pending
+      - paid
+      - not-charged
+      type: string
+      description: |-
+        * `pending` - Pending
+        * `paid` - Paid
+        * `not-charged` - Not Charged
+    PaymentUpdateRequest:
+      type: object
+      properties:
+        status:
+          allOf:
+          - $ref: '#/components/schemas/PaymentUpdateStatusEnum'
+          description: |-
+            Only `paid` for now (Mobile Money checked by staff).
+
+            * `paid` - paid
+      required:
+      - status
+    PaymentUpdateStatusEnum:
+      enum:
+      - paid
+      type: string
+      description: '* `paid` - paid'
+    PendingVerification:
+      type: object
+      properties:
+        pendingVerification:
+          type: boolean
+        email:
+          type: string
+          format: email
+        expiresIn:
+          type: integer
+          description: Seconds before the code expires.
+      required:
+      - email
+      - expiresIn
+      - pendingVerification
+    PlaceOrderRequest:
+      type: object
+      properties:
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartLineRequest'
+        fulfilment:
+          $ref: '#/components/schemas/FulfilmentEnum'
+        address:
+          type: string
+          nullable: true
+          default: ''
+          maxLength: 300
+        payment:
+          $ref: '#/components/schemas/PaymentEnum'
+        contact:
+          $ref: '#/components/schemas/ContactRequest'
+        notes:
+          type: string
+          nullable: true
+          default: ''
+          maxLength: 500
+      required:
+      - fulfilment
+      - lines
+      - payment
+    PlacementEnum:
+      enum:
+      - home-offers
+      - home-hero
+      type: string
+      description: |-
+        * `home-offers` - Home Offers
+        * `home-hero` - Home Hero
+    Promotion:
+      type: object
+      description: A campaign as the homepage shows it (type Promotion).
+      properties:
+        id:
+          type: string
+        kicker:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+        highlight:
+          type: object
+          nullable: true
+          properties:
+            label:
+              type: object
+              properties:
+                en:
+                  type: string
+                fr:
+                  type: string
+              required:
+              - en
+              - fr
+            value:
+              type: object
+              properties:
+                en:
+                  type: string
+                fr:
+                  type: string
+              required:
+              - en
+              - fr
+            labelFirst:
+              type: boolean
+        title:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+        text:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+        cta:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+        image:
+          type: string
+          maxLength: 500
+        href:
+          type: string
+        tone:
+          $ref: '#/components/schemas/ToneEnum'
+        tag:
+          $ref: '#/components/schemas/TagEnum'
+        placement:
+          $ref: '#/components/schemas/PlacementEnum'
+        ctaCategory:
+          type: string
+          readOnly: true
+        schedule:
+          type: object
+          properties:
+            en:
+              type: string
+            fr:
+              type: string
+          required:
+          - en
+          - fr
+          nullable: true
+      required:
+      - cta
+      - ctaCategory
+      - href
+      - id
+      - kicker
+      - text
+      - title
+    RefreshRequest:
+      type: object
+      properties:
+        refresh:
+          type: string
+          minLength: 1
+      required:
+      - refresh
+    RoleEnum:
+      enum:
+      - client
+      - manager
+      - superadmin
+      type: string
+      description: |-
+        * `client` - Client
+        * `manager` - Manager
+        * `superadmin` - Superadmin
+    ScopeEnum:
+      enum:
+      - orders
+      - content
+      - access
+      type: string
+      description: |-
+        * `orders` - Orders
+        * `content` - Content
+        * `access` - Access
+    ScopesEnum:
+      enum:
+      - food
+      - drinks
+      - labels
+      - ads
+      - publish
+      type: string
+      description: |-
+        * `food` - Food
+        * `drinks` - Drinks
+        * `labels` - Labels
+        * `ads` - Ads
+        * `publish` - Publish
+    SessionUser:
+      type: object
+      description: The signed-in person (contract §2 SessionUser).
+      properties:
+        id:
+          type: string
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        name:
+          type: string
+          maxLength: 120
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        phone:
+          type: string
+          nullable: true
+          readOnly: true
+        clientCode:
+          type: string
+          nullable: true
+          maxLength: 7
+        permissions:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        contentGrant:
+          allOf:
+          - $ref: '#/components/schemas/ContentGrant'
+          nullable: true
+      required:
+      - contentGrant
+      - email
+      - id
+      - name
+      - permissions
+      - phone
+    SignInRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+      required:
+      - email
+      - password
+    SignUpRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        email:
+          type: string
+          format: email
+          minLength: 1
+        phone:
+          type: string
+          minLength: 1
+          maxLength: 20
+        password:
+          type: string
+          minLength: 1
+          maxLength: 128
+        lang:
+          allOf:
+          - $ref: '#/components/schemas/LangEnum'
+          default: en
+          description: |-
+            Language of the email.
+
+            * `en` - en
+            * `fr` - fr
+      required:
+      - email
+      - name
+      - password
+      - phone
+    SocialLink:
+      type: object
+      properties:
+        label:
+          type: string
+          maxLength: 40
+        href:
+          type: string
+          maxLength: 300
+      required:
+      - href
+      - label
+    SocialLinkRequest:
+      type: object
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 40
+        href:
+          type: string
+          minLength: 1
+          maxLength: 300
+      required:
+      - href
+      - label
+    StaffMember:
+      type: object
+      description: A manager in the directory (contract §10 StaffMember).
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+          maxLength: 120
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        assignment:
+          $ref: '#/components/schemas/AssignmentEnum'
+        duty:
+          $ref: '#/components/schemas/DutyEnum'
+        status:
+          $ref: '#/components/schemas/StaffMemberStatusEnum'
+        contentGrant:
+          type: object
+          additionalProperties: {}
+          nullable: true
+          description: The grant in force or starting later (not revoked, not expired).
+          readOnly: true
+        activeOrders:
+          type: integer
+          readOnly: true
+          default: 0
+      required:
+      - activeOrders
+      - contentGrant
+      - email
+      - id
+      - name
+    StaffMemberStatusEnum:
+      enum:
+      - active
+      - suspended
+      - invited
+      type: string
+      description: |-
+        * `active` - Active
+        * `suspended` - Suspended
+        * `invited` - Invited
+    StaffOrder:
+      type: object
+      description: Staff also see how to reach the customer.
+      properties:
+        id:
+          type: string
+        clientCode:
+          type: string
+          readOnly: true
+          description: '"WQB001A", empty for guest orders.'
+        guest:
+          type: boolean
+          description: Placed without an account (name and phone only).
+        contact:
+          $ref: '#/components/schemas/OrderContact'
+        clientName:
+          type: string
+        managerId:
+          type: string
+          nullable: true
+          readOnly: true
+        managerName:
+          type: string
+          nullable: true
+          readOnly: true
+        placedAt:
+          type: string
+          format: date-time
+        fulfilment:
+          $ref: '#/components/schemas/FulfilmentEnum'
+        address:
+          type: string
+          nullable: true
+          readOnly: true
+        payment:
+          $ref: '#/components/schemas/PaymentEnum'
+        paymentStatus:
+          $ref: '#/components/schemas/PaymentStatusEnum'
+        stage:
+          $ref: '#/components/schemas/OrderStage'
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderLine'
+        subtotal:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        fees:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        total:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        history:
+          description: 'When each stage was reached: {"new": "2026-10-06T12:18:00+02:00"}'
+        notes:
+          type: string
+          nullable: true
+          readOnly: true
+        contactEmail:
+          type: string
+          nullable: true
+          readOnly: true
+      required:
+      - address
+      - clientCode
+      - clientName
+      - contact
+      - contactEmail
+      - fulfilment
+      - id
+      - lines
+      - managerId
+      - managerName
+      - notes
+      - payment
+      - subtotal
+      - total
+    StaffOrderEnvelope:
+      type: object
+      properties:
+        order:
+          $ref: '#/components/schemas/StaffOrder'
+      required:
+      - order
+    TagEnum:
+      enum:
+      - promotion
+      - new
+      - offer
+      type: string
+      description: |-
+        * `promotion` - Promotion
+        * `new` - New
+        * `offer` - Offer
+    TokenPair:
+      type: object
+      properties:
+        access:
+          type: string
+        refresh:
+          type: string
+      required:
+      - access
+      - refresh
+    ToneEnum:
+      enum:
+      - yellow
+      - plain
+      type: string
+      description: |-
+        * `yellow` - Yellow
+        * `plain` - Plain
+    TransitionRequest:
+      type: object
+      properties:
+        to:
+          $ref: '#/components/schemas/OrderStage'
+      required:
+      - to
+    Upload:
+      type: object
+      properties:
+        imageId:
+          type: string
+          format: uuid
+        url:
+          type: string
+          format: uri
+      required:
+      - imageId
+      - url
+    VerifyEmailRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+        code:
+          type: string
+          minLength: 1
+          pattern: ^\s*\d{6}\s*$
+      required:
+      - code
+      - email
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+tags:
+- name: Auth
+  description: Sign-up, email code, sign-in, tokens, password, profile.
+- name: Catalogue
+  description: Public menu, promotions and business details.
+- name: Orders
+  description: Checkout (clients and guests) and the client's orders.
+- name: Notifications
+  description: Order updates sent to clients.
+- name: Register
+  description: Staff order queue and order transitions.
+- name: Content
+  description: Menu editing (drafts, publish), uploads and homepage campaigns.
+- name: Staff
+  description: Managers, invitations, content grants, overview and audit (superadmin).

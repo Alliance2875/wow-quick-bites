@@ -9,7 +9,6 @@ import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import { resendCodeAction, verifyEmailAction, type AuthFormState, type ResendState } from "@/lib/auth/actions";
 import { rememberSession } from "@/lib/auth/session";
-import { fill } from "@/lib/format";
 import { localePath, routes } from "@/lib/routes";
 import { AuthShell } from "./AuthCard";
 import AuthError from "./AuthError";
@@ -20,13 +19,11 @@ export default function VerifyEmailForm({
   lang,
   dict,
   email,
-  devCode,
 }: {
   lang: Locale;
   dict: Dictionary["account"];
   /** null when there is no pending sign-up (expired or opened directly) */
   email: string | null;
-  devCode?: string;
 }) {
   const t = dict.verify;
   const router = useRouter();
@@ -41,7 +38,6 @@ export default function VerifyEmailForm({
   }, undefined);
   const [resent, resend] = useActionState<ResendState>(async () => {
     const result = await resendCodeAction();
-    // The development code shown below changes with each new code
     if (result && "sent" in result) router.refresh();
     return result;
   }, undefined);
@@ -96,8 +92,6 @@ export default function VerifyEmailForm({
           {"sent" in resent ? t.resent : dict.errors[resent.error]}
         </p>
       )}
-      {devCode && <p className="mt-4 rounded-xl bg-soft px-3 py-2 text-xs text-accent">{fill(t.devCode, { code: devCode })}</p>}
-
       <BackToLogin href={signIn} label={t.back} />
     </AuthShell>
   );

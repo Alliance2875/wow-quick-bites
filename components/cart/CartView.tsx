@@ -14,6 +14,8 @@ import { useHydrated } from "@/lib/create-store";
 import { summarize } from "@/lib/cart/pricing";
 import { fill, plural } from "@/lib/format";
 import { localePath, routes } from "@/lib/routes";
+import { useGetBusinessQuery } from "@/lib/redux/api/businessApi";
+import { useGetMenuBundleQuery } from "@/lib/redux/api/menuApi";
 import CartLineItem from "./CartLineItem";
 
 export default function CartView({
@@ -28,11 +30,24 @@ export default function CartView({
   const hydrated = useHydrated();
   const lines = useCart();
   const user = useSession();
-  const { count, subtotal, fees, total } = summarize(lines);
+  const { data: catalogue, isLoading: menuLoading, isError: menuError } = useGetMenuBundleQuery();
+  const { data: businessInfo, isLoading: businessLoading, isError: businessError } = useGetBusinessQuery();
+  const { count, subtotal, fees, total } = summarize(
+    lines,
+    catalogue?.items,
+    catalogue?.optionGroups,
+    businessInfo?.fees.service,
+  );
   const href = (path: string) => localePath(lang, path);
   const items = plural(dict.itemCount, count);
 
-  if (!hydrated) return <div className="min-h-[60vh]" />;
+  if (!hydrated || (lines.length > 0 && (menuLoading || businessLoading))) {
+    return <div className="min-h-[60vh]" aria-busy="true" />;
+  }
+
+  if (lines.length > 0 && (menuError || businessError || !catalogue || !businessInfo)) {
+    return <p role="alert" className="page-container py-20 text-center">{dict.priceLoadError}</p>;
+  }
 
   if (!lines.length) {
     return (

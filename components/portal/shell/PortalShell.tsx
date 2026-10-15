@@ -5,7 +5,6 @@ import SignOutButton from "@/components/shared/layout/SignOutButton";
 import SiteHeader from "@/components/shared/layout/SiteHeader";
 import ThemeToggle from "@/components/shared/layout/ThemeToggle";
 import Icon from "@/components/shared/ui/Icon";
-import { getStaff } from "@/data/staff";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import type { Viewer } from "@/lib/auth/dal";
@@ -90,12 +89,13 @@ export default function PortalShell({
   ];
   const home = localePath(lang, viewer.role === "client" ? routes.account : viewer.role === "manager" ? routes.adminOrders : routes.admin);
   const themeLabels = { dark: dict.shell.themeDark, light: dict.shell.themeLight };
-  const member = viewer.role === "client" ? undefined : getStaff(viewer.id);
   const roleLine =
     viewer.role === "superadmin"
       ? dict.roleLine.superadmin
-      : viewer.role === "manager" && member
-        ? fill(dict.roleLine.manager, { assignment: dict.assignment[member.assignment] })
+      : viewer.role === "manager" && viewer.assignment
+        ? fill(dict.roleLine.manager, { assignment: dict.assignment[viewer.assignment] })
+        : viewer.role === "manager"
+          ? dict.roles.manager
         : dict.roles.client;
 
   const siteHeader = viewer.role === "client" && common ? <SiteHeader lang={lang} dict={common} /> : undefined;

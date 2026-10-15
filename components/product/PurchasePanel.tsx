@@ -6,13 +6,12 @@ import OptionGroupFields from "@/components/shared/product/OptionGroupFields";
 import { Button } from "@/components/shared/ui/Button";
 import Icon from "@/components/shared/ui/Icon";
 import QuantityStepper from "@/components/shared/ui/QuantityStepper";
-import { getOptionGroups } from "@/data/product-options";
 import type { MenuItem } from "@/data/types";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import { addToCart } from "@/lib/cart/cart";
-import { unitPrice } from "@/lib/cart/pricing";
 import { fill, formatPrice } from "@/lib/format";
+import { useGetOptionGroupsQuery } from "@/lib/redux/api/menuApi";
 
 /** Quantity, options, notes and the "Add to cart · RWF x" button of the product page. */
 export default function PurchasePanel({
@@ -35,8 +34,16 @@ export default function PurchasePanel({
   const [choices, setChoices] = useState<string[]>([]);
   const [note, setNote] = useState("");
   const [added, setAdded] = useState(false);
+  const { data: optionGroups = [] } = useGetOptionGroupsQuery();
+  const itemOptionGroups = optionGroups.filter((group) => item.optionGroups?.includes(group.id));
 
-  const total = unitPrice(item.id, choices) * quantity;
+  const total =
+    (item.price +
+      itemOptionGroups
+        .flatMap((group) => group.choices)
+        .filter((choice) => choices.includes(choice.id))
+        .reduce((sum, choice) => sum + choice.price, 0)) *
+    quantity;
 
   const toggle = (id: string) =>
     setChoices((current) => (current.includes(id) ? current.filter((c) => c !== id) : [...current, id]));
@@ -59,7 +66,7 @@ export default function PurchasePanel({
         />
       </div>
 
-      {getOptionGroups(item.optionGroups).map((group) => (
+      {itemOptionGroups.map((group) => (
         <OptionGroupFields
           key={group.id}
           group={group}

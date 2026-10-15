@@ -6,8 +6,7 @@ import { googleConfig, googleRedirectUri } from "@/lib/auth/google";
 import { localePath, routes } from "@/lib/routes";
 
 // Starts "Continue with Google" (OAuth 2.0 authorization code + PKCE).
-// Needs GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET (.env.example). Without them, development
-// signs in a demo Google account so the flow can be tried; production refuses.
+// Requires GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET (.env.example).
 
 const base64url = (buffer: Buffer) => buffer.toString("base64url");
 
@@ -19,15 +18,7 @@ export async function GET(request: NextRequest) {
   const config = googleConfig();
 
   if (!config) {
-    if (process.env.NODE_ENV === "production") {
-      return NextResponse.redirect(new URL(`${localePath(lang, routes.signIn)}?error=google`, request.url));
-    }
-    const state = base64url(randomBytes(16));
-    await saveGoogleState({ state, verifier: "", lang, next });
-    const mock = new URL(googleRedirectUri(request), request.url);
-    mock.searchParams.set("state", state);
-    mock.searchParams.set("mock", "1");
-    return NextResponse.redirect(mock);
+    return NextResponse.redirect(new URL(`${localePath(lang, routes.signIn)}?error=google`, request.url));
   }
 
   const state = base64url(randomBytes(16));

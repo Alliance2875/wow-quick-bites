@@ -2,11 +2,11 @@ import Image from "next/image";
 import type { Locale } from "@/i18n/config";
 import type { CartLine } from "@/lib/cart/cart";
 import { formatPrice } from "@/lib/format";
-import { lineDetails } from "./line-details";
+import { useLineDetails } from "./line-details";
 
 /** Compact read-only line: thumbnail, name, meta, "1 × RWF 6,000", total (checkout sidebar, receipt). */
 export default function OrderLineRow({ line, lang }: { line: CartLine; lang: Locale }) {
-  const { name, image, meta, unit } = lineDetails(line, lang);
+  const { name, image, meta, unit } = useLineDetails(line, lang);
 
   return (
     <li className="flex items-center gap-3 py-3">

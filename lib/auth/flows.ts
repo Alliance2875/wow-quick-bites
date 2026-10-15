@@ -1,7 +1,6 @@
 import "server-only";
-import { randomInt } from "node:crypto";
 import { cookies } from "next/headers";
-import { flowCookieOptions, hashCode, signData, verifyData } from "./token";
+import { flowCookieOptions, signData, verifyData } from "./token";
 
 // State of the multi-step auth flows, kept in short-lived signed HttpOnly cookies (no database).
 // With the backend: the pending sign-up and the one-time code live on the server
@@ -13,54 +12,18 @@ const PENDING_COOKIE = "wqb_pending_signup";
 const PENDING_TTL_SECONDS = 15 * 60;
 export const CODE_TTL_MS = 10 * 60 * 1000;
 export const RESEND_DELAY_MS = 30 * 1000;
-export const MAX_CODE_ATTEMPTS = 5;
 
 export type PendingSignUp = {
   name: string;
   email: string;
   phone: string;
-  /** HMAC of the 6-digit code (lib/auth/token.ts → hashCode) */
-  codeHash: string;
   sentAt: number;
-  attempts: number;
   lang: string;
   next: string;
-  /** Development only: the code, shown on the verify page because no email is sent yet */
-  devCode?: string;
 };
 
-const newCode = () => String(randomInt(0, 1_000_000)).padStart(6, "0");
-
-/**
- * MOCK email: logs the code in the server console. Replace with the backend's mail sending
- * (the backend generates and stores the code itself).
- */
-function sendVerificationEmail(email: string, code: string) {
-  if (process.env.NODE_ENV !== "production") console.info(`[auth] verification code for ${email}: ${code}`);
-}
-
-export async function startPendingSignUp(input: Omit<PendingSignUp, "codeHash" | "sentAt" | "attempts" | "devCode">) {
-  const code = newCode();
-  await savePending({
-    ...input,
-    codeHash: await hashCode(code, input.email),
-    sentAt: Date.now(),
-    attempts: 0,
-    ...(process.env.NODE_ENV !== "production" && { devCode: code }),
-  });
-  sendVerificationEmail(input.email, code);
-}
-
-export async function resendCode(pending: PendingSignUp) {
-  const code = newCode();
-  await savePending({
-    ...pending,
-    codeHash: await hashCode(code, pending.email),
-    sentAt: Date.now(),
-    attempts: 0,
-    ...(process.env.NODE_ENV !== "production" && { devCode: code }),
-  });
-  sendVerificationEmail(pending.email, code);
+export async function startPendingSignUp(input: Omit<PendingSignUp, "sentAt">) {
+  await savePending({ ...input, sentAt: Date.now() });
 }
 
 export async function savePending(pending: PendingSignUp) {

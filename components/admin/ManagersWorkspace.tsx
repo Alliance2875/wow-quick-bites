@@ -10,7 +10,6 @@ import { Badge } from "@/components/portal/ui/Status";
 import { Table, TableFooter, Td, Th, THead, Tr } from "@/components/portal/ui/Table";
 import { useToast } from "@/components/portal/ui/Toast";
 import Icon from "@/components/shared/ui/Icon";
-import { getStaff, superadmin } from "@/data/staff";
 import type { ContentGrant, StaffMember } from "@/data/types";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
@@ -21,6 +20,7 @@ import { formatDate, formatTime, fromKigaliInput, toKigaliInput } from "@/lib/po
 import { isActiveOrder } from "@/lib/portal/orders";
 import { useOrders } from "@/lib/portal/store";
 import { inviteManager, updateManager, useAudit, useManagers, type DirectoryEntry } from "@/lib/portal/staff-store";
+import { useGetAdminManagerQuery } from "@/lib/redux/api/adminApi";
 import { auditText } from "./audit";
 
 type Filter = "all" | "active" | "suspended";
@@ -44,20 +44,30 @@ export default function ManagersWorkspace({
   const orders = useOrders();
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState(() => managers.find((m) => m.id === initialManager)?.id ?? managers[0].id);
+  const [selectedId, setSelectedId] = useState(() => managers.find((m) => m.id === initialManager)?.id ?? managers[0]?.id ?? "");
   const inviteRef = useRef<HTMLInputElement>(null);
   const selected = managers.find((m) => m.id === selectedId) ?? managers[0];
 
   const activeOrders = (id: string) => orders.filter((o) => o.managerId === id && isActiveOrder(o)).length;
   const hasGrant = (m: StaffMember) => Boolean(m.contentGrant && isActiveWindow(m.contentGrant.startsAt, m.contentGrant.expiresAt));
   const scopeLine = (m: DirectoryEntry) =>
-    m.invited ? t.scope.invited : m.status === "suspended" ? t.scope.none : hasGrant(m) ? t.scope.grant : t.scope.default;
+    m.status === "suspended" ? t.scope.none : hasGrant(m) ? t.scope.grant : t.scope.default;
 
   const q = query.trim().toLowerCase();
   const shown = managers
     .filter((m) => filter === "all" || m.status === filter)
     .filter((m) => !q || m.name.toLowerCase().includes(q) || p.assignment[m.assignment].toLowerCase().includes(q));
   const count = (f: Filter) => managers.filter((m) => f === "all" || m.status === f).length;
+
+  if (!selected) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title={t.title} subtitle={t.subtitle} />
+        <InviteForm inputRef={inviteRef} dict={dict} onSent={show} />
+        {toast}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -111,7 +121,7 @@ export default function ManagersWorkspace({
                       {m.status === "active" && m.assignment !== "none" && ` · ${p.duty[m.duty]}`}
                     </Td>
                     <Td className={cn("text-xs", m.status === "active" ? "text-success" : "text-critical")}>
-                      {m.invited ? t.invited : p.staffStatus[m.status]}
+                      {p.staffStatus[m.status]}
                     </Td>
                     <Td className="tabular-nums">{activeOrders(m.id)}</Td>
                     <Td>
@@ -131,19 +141,19 @@ export default function ManagersWorkspace({
             </TableFooter>
           </Panel>
 
-          <InviteForm inputRef={inviteRef} viewerId={viewerId} dict={dict} onSent={show} />
+          <InviteForm inputRef={inviteRef} dict={dict} onSent={show} />
 
           <Note title={t.suspendNote.title}>{t.suspendNote.text}</Note>
         </div>
 
-        <ManagerEditor
+        {selected && <ManagerEditor
           key={selected.id + JSON.stringify(selected.contentGrant ?? null) + selected.status}
           manager={selected}
           viewerId={viewerId}
           dict={dict}
           onSaved={show}
           hasGrant={hasGrant(selected)}
-        />
+        />}
       </div>
 
       <Matrix manager={selected} hasGrant={hasGrant(selected)} dict={dict} />
@@ -155,12 +165,10 @@ export default function ManagersWorkspace({
 
 function InviteForm({
   inputRef,
-  viewerId,
   dict,
   onSent,
 }: {
   inputRef: React.RefObject<HTMLInputElement | null>;
-  viewerId: string;
   dict: Pick<Dictionary, "portal" | "staff">;
   onSent: (message: string) => void;
 }) {
@@ -168,17 +176,21 @@ function InviteForm({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [assignment, setAssignment] = useState<"pickup-register" | "backup">("pickup-register");
+  const [error, setError] = useState(false);
 
   return (
     <Panel title={t.title} subtitle={t.subtitle}>
       <form
         className="space-y-4"
-        onSubmit={(event) => {
+        onSubmit={async (event) => {
           event.preventDefault();
-          inviteManager(
-            { name: name.trim(), email: email.trim(), assignment },
-            { actorId: viewerId, scope: "access", template: "invited", values: { email: email.trim() } },
-          );
+          setError(false);
+          try {
+            await inviteManager({ name: name.trim(), email: email.trim(), assignment });
+          } catch {
+            setError(true);
+            return;
+          }
           onSent(fill(t.sent, { email: email.trim() }));
           setName("");
           setEmail("");
@@ -209,13 +221,14 @@ function InviteForm({
         <ActionButton type="submit" variant="primary">
           {t.send}
         </ActionButton>
+        {error && <p role="alert" className="text-xs text-critical">{dict.staff.managers.inviteForm.error}</p>}
       </form>
     </Panel>
   );
 }
 
 function ManagerEditor({
-  manager,
+  manager: initialManager,
   viewerId,
   dict,
   onSaved,
@@ -227,6 +240,8 @@ function ManagerEditor({
   onSaved: (message: string) => void;
   hasGrant: boolean;
 }) {
+  const { data: managerDetail } = useGetAdminManagerQuery(initialManager.id);
+  const manager = managerDetail ?? initialManager;
   const t = dict.staff.managers.detail;
   const p = dict.portal;
   const [name, setName] = useState(manager.name);
@@ -237,56 +252,39 @@ function ManagerEditor({
   const [start, setStart] = useState(toKigaliInput(manager.contentGrant?.startsAt ?? "2026-10-06T09:00:00+02:00"));
   const [end, setEnd] = useState(toKigaliInput(manager.contentGrant?.expiresAt ?? "2026-10-09T18:00:00+02:00"));
   const suspended = manager.status === "suspended";
-  const audit = (template: "managerSaved" | "suspend" | "reactivate" | "grant" | "revoke", values: Record<string, string> = {}) => ({
-    actorId: viewerId,
-    scope: "access" as const,
-    targetId: manager.id,
-    template,
-    values,
-  });
-
-  const saveManager = () => {
-    updateManager(
-      manager.id,
-      { name: name.trim() || manager.name, duty, assignment },
-      audit("managerSaved", { assignment: p.assignment[assignment], duty: p.duty[duty] }),
-    );
-    onSaved(t.saved);
+  const [error, setError] = useState(false);
+  const save = async (patch: Parameters<typeof updateManager>[1], message: string) => {
+    setError(false);
+    try {
+      await updateManager(manager.id, patch);
+      onSaved(message);
+    } catch {
+      setError(true);
+    }
   };
 
+  const saveManager = () => save({ name: name.trim() || manager.name, duty, assignment }, t.saved);
+
   const toggleSuspension = () =>
-    updateManager(
-      manager.id,
+    save(
       suspended ? { status: "active" } : { status: "suspended", duty: "off", assignment: "none", contentGrant: null },
-      audit(suspended ? "reactivate" : "suspend"),
+      t.saved,
     );
 
   const grant = () => {
     if (!scopes.length) return revoke();
     const contentGrant: ContentGrant = {
-      grantedBy: superadmin.id,
+      grantedBy: viewerId,
       scopes,
       startsAt: fromKigaliInput(start) ?? new Date().toISOString(),
       expiresAt: expires ? fromKigaliInput(end) : undefined,
     };
-    const scopeNames = dict.staff.content.grant.scopes;
-    updateManager(
-      manager.id,
-      { contentGrant },
-      audit("grant", {
-        scopes: scopes.map((scope) => scopeNames[scope]).join(", "),
-        expiry: contentGrant.expiresAt
-          ? fill(dict.staff.auditTemplates.until, { date: `${formatDate(contentGrant.expiresAt)}, ${formatTime(contentGrant.expiresAt)}` })
-          : dict.staff.auditTemplates.noExpiry,
-      }),
-    );
-    onSaved(fill(t.granted, { name: manager.name }));
+    save({ contentGrant }, fill(t.granted, { name: manager.name }));
   };
 
   const revoke = () => {
-    updateManager(manager.id, { contentGrant: null }, audit("revoke"));
+    void save({ contentGrant: null }, fill(t.revoked, { name: manager.name }));
     setScopes([]);
-    onSaved(fill(t.revoked, { name: manager.name }));
   };
 
   const permissionRow = (title: string, text: string, control: React.ReactNode) => (
@@ -334,6 +332,7 @@ function ManagerEditor({
             {suspended ? t.reactivate : t.suspend}
           </ActionButton>
         </div>
+        {error && <p role="alert" className="text-xs text-critical">{t.saveError}</p>}
 
         {suspended ? (
           <Note>{fill(t.suspendedNote, { name: manager.name })}</Note>
@@ -401,7 +400,7 @@ function ManagerEditor({
                 <Input label={t.expiry} type="datetime-local" value={end} onChange={(e) => setEnd(e.target.value)} disabled={!expires} />
               </div>
               <p className="text-[0.8125rem] leading-relaxed">
-                {fill(t.grantedBy, { name: getStaff(manager.contentGrant?.grantedBy ?? superadmin.id)?.name ?? "", role: hasGrant ? t.roleDelegate : t.roleDefault })}
+                {fill(t.grantedBy, { name: manager.contentGrant?.grantedBy ?? "", role: hasGrant ? t.roleDelegate : t.roleDefault })}
               </p>
             </div>
 
@@ -480,10 +479,10 @@ function AccessAudit({ lang, dict }: { lang: Locale; dict: Pick<Dictionary, "por
               {formatDate(event.at)} · {formatTime(event.at)}
             </span>
             <span>
-              {getStaff(event.actorId)?.name ?? event.actorId}
-              {event.targetId && ` → ${getStaff(event.targetId)?.name ?? event.targetId}`}
+              {event.actorId}
+              {event.targetId && ` → ${event.targetId}`}
             </span>
-            <span>{auditText(event, lang, dict.staff.auditTemplates)}</span>
+            <span>{auditText(event, lang)}</span>
           </li>
         ))}
       </ul>

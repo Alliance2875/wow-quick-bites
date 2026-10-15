@@ -32,6 +32,7 @@ export default function ClientNotifications({
   const t = dict.clientArea.notifications;
   const p = dict.portal;
   const [unreadOnly, setUnreadOnly] = useState(false);
+  const [mutationError, setMutationError] = useState(false);
   const notifications = useNotifications(viewer.clientCode);
   const orders = useOrders().filter((order) => order.clientCode === viewer.clientCode);
   const unread = notifications.filter((n) => !n.read);
@@ -60,11 +61,22 @@ export default function ClientNotifications({
         title={t.title}
         subtitle={fill(t.subtitle, { name: viewer.name, code: viewer.clientCode })}
         action={
-          <ActionButton onClick={() => markNotificationsRead(unread.map((n) => n.id))} disabled={!unread.length}>
+          <ActionButton
+            onClick={async () => {
+              setMutationError(false);
+              try {
+                await markNotificationsRead(unread.map((n) => n.id));
+              } catch {
+                setMutationError(true);
+              }
+            }}
+            disabled={!unread.length}
+          >
             {t.markAll}
           </ActionButton>
         }
       />
+      {mutationError && <p role="alert" className="text-sm text-critical">{t.mutationError}</p>}
 
       <div className="flex flex-wrap gap-2">
         <button type="button" aria-pressed={!unreadOnly} onClick={() => setUnreadOnly(false)} className={chipClasses(!unreadOnly)}>
@@ -146,6 +158,7 @@ function NotificationRow({
   dayLabel: (iso: string) => string;
 }) {
   const t = dict.clientArea.notifications;
+  const [mutationError, setMutationError] = useState(false);
   const content = notificationContent(notification, order, lang, t.templates);
   const href = localePath(lang, routes.accountOrder(notification.orderId));
 
@@ -167,11 +180,16 @@ function NotificationRow({
         <p className="mt-1.5 text-xs text-muted-foreground">{content.text}</p>
         <Link
           href={href}
-          onClick={() => !notification.read && markNotificationsRead([notification.id])}
+          onClick={() => {
+            if (!notification.read) {
+              void markNotificationsRead([notification.id]).catch(() => setMutationError(true));
+            }
+          }}
           className="mt-2.5 inline-flex items-center gap-1 text-xs font-semibold text-accent hover:underline"
         >
           {fill(t.viewDetails, { id: notification.orderId })} <Icon name="arrowRight" className="h-3.5 w-3.5" />
         </Link>
+        {mutationError && <p role="alert" className="mt-2 text-xs text-critical">{t.mutationError}</p>}
       </div>
     </li>
   );

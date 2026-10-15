@@ -12,6 +12,7 @@ export const cart: CartDict = {
   },
   addMore: "Ajouter des articles",
   empty: "Votre panier est vide.",
+  priceLoadError: "Impossible de charger les prix actuels du menu. Veuillez réessayer.",
   browseMenu: "Voir le menu",
   itemsTitle: "Articles dans votre panier",
   itemCount: { one: "{count} article", other: "{count} articles" },

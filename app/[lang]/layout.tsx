@@ -4,6 +4,7 @@ import InlineScript from "@/components/shared/layout/InlineScript";
 import { locales } from "@/i18n/config";
 import { resolveLang } from "@/i18n/get-dictionary";
 import { defaultTheme, themeScript } from "@/lib/theme";
+import StoreProvider from "@/components/providers/StoreProvider";
 import "../globals.css";
 
 const inter = Inter({
@@ -37,7 +38,9 @@ export default async function RootLayout({ children, params }: LayoutProps<"/[la
         <InlineScript html={themeScript} />
       </head>
       {/* Header/footer come from the (site) layout; the portal has its own sidebar shell */}
-      <body className="flex min-h-full flex-col bg-background text-foreground">{children}</body>
+      <body className="flex min-h-full flex-col bg-background text-foreground">
+        <StoreProvider>{children}</StoreProvider>
+      </body>
     </html>
   );
 }

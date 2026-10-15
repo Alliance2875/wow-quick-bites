@@ -69,6 +69,7 @@ export const account = {
     subtitle: "Recover your password and return to ordering and tracking.",
     heroTitle: "Fresh Food. Amazing Taste.",
     heroTagline: "WOW Quick Bites by Rwasibo",
+    errors: { server: "The request could not be completed. Please try again." },
     request: {
       kicker: "STEP 1 · REQUEST A RESET",
       title: "Forgot your password?",

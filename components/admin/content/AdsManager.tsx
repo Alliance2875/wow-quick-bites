@@ -8,7 +8,6 @@ import { Input, Select } from "@/components/portal/ui/Controls";
 import { Eyebrow, Panel } from "@/components/portal/ui/Panel";
 import { Badge } from "@/components/portal/ui/Status";
 import Icon from "@/components/shared/ui/Icon";
-import { categories } from "@/data/categories";
 import type { Campaign, CategoryId } from "@/data/types";
 import { localize, type Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
@@ -17,10 +16,22 @@ import { cn, fill, plural } from "@/lib/format";
 import { portalNow } from "@/lib/portal/clock";
 import { patchCampaign, saveCampaign, useCampaigns, type EditableCampaign } from "@/lib/portal/content-store";
 import { formatDayMonth, formatTime, fromKigaliInput, toKigaliInput } from "@/lib/portal/format";
-import { recordAudit } from "@/lib/portal/staff-store";
+import { useGetCategoriesQuery } from "@/lib/redux/api/menuApi";
 import ImageDrop from "./ImageDrop";
 
 type Status = Campaign["status"] | "paused";
+
+const blankCampaign = (): EditableCampaign => ({
+  promotionId: "new-campaign",
+  status: "draft",
+  tag: "promotion",
+  placement: "home-offers",
+  ctaCategory: null,
+  title: { en: "", fr: "" },
+  text: { en: "", fr: "" },
+  cta: { en: "", fr: "" },
+  image: "",
+});
 
 export default function AdsManager({
   lang,
@@ -33,27 +44,31 @@ export default function AdsManager({
 }) {
   const t = dict.staff.content.ads;
   const c = dict.staff.content;
+  const { data: categories = [] } = useGetCategoriesQuery();
   const canPublish = viewer.permissions.includes("content:publish");
   const campaigns = useCampaigns();
-  const [draft, setDraft] = useState<EditableCampaign>(() => campaigns[0]);
+  const [draftOverride, setDraft] = useState<EditableCampaign | null>(null);
+  const draft = draftOverride ?? campaigns[0] ?? blankCampaign();
   const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState(false);
   // Storefront preview language: independent of the portal language
   const [previewLang, setPreviewLang] = useState<Locale>(lang);
   const bilingual = { same: c.editor.sameText, languages: c.editor.languages };
 
   const status = (campaign: EditableCampaign): Status => (campaign.paused ? "paused" : campaign.status);
-  const audit = (template: "adDraft" | "adPublished" | "adPaused" | "adResumed" | "adDeleted" | "adCancelled", campaign: EditableCampaign) =>
-    recordAudit({ actorId: viewer.id, scope: "content", template, values: { title: campaign.title } });
-
   const destination = (category: CategoryId | null) =>
-    category ? fill(t.menuCategory, { category: localize(categories.find((x) => x.id === category)!.name, lang) }) : t.wholeMenu;
+    category
+      ? fill(t.menuCategory, {
+          category: localize(categories.find((item) => item.id === category)?.name ?? { en: category, fr: category }, lang),
+        })
+      : t.wholeMenu;
 
   const update = (patch: Partial<EditableCampaign>) => {
-    setDraft((current) => ({ ...current, ...patch }));
+    setDraft((current) => ({ ...(current ?? draft), ...patch }));
     setMessage(null);
   };
 
-  const save = (publish: boolean) => {
+  const save = async (publish: boolean) => {
     const later = Boolean(draft.startsAt && Date.parse(draft.startsAt) > portalNow());
     // A language left empty shows the other one until it is translated
     const both = (text: { en: string; fr: string }) => ({ en: text.en.trim() || text.fr, fr: text.fr.trim() || text.en });
@@ -65,17 +80,22 @@ export default function AdsManager({
       status: publish ? (later ? "scheduled" : "published") : "draft",
       paused: false,
     };
-    saveCampaign(campaign);
-    setDraft(campaign);
-    audit(publish ? "adPublished" : "adDraft", campaign);
-    setMessage(publish ? c.editor.publishedToast : c.editor.saved);
+    setError(false);
+    try {
+      const saved = await saveCampaign(campaign);
+      setDraft(saved);
+      setMessage(publish ? c.editor.publishedToast : c.editor.saved);
+    } catch {
+      setError(true);
+      setMessage(c.editor.saveError);
+    }
   };
 
   const addAd = () => {
-    const template = campaigns[0];
+    const template = campaigns[0] ?? blankCampaign();
     setDraft({
       ...template,
-      promotionId: `ad-${Date.now().toString(36)}`,
+      promotionId: `campaign-${Date.now().toString(36)}`,
       status: "draft",
       title: { en: "", fr: "" },
       text: { en: "", fr: "" },
@@ -85,6 +105,18 @@ export default function AdsManager({
       paused: false,
     });
     setMessage(null);
+    setError(false);
+  };
+
+  const updateCampaign = async (id: string, patch: Partial<EditableCampaign>) => {
+    setError(false);
+    try {
+      await patchCampaign(id, patch);
+      setMessage(t.updated);
+    } catch {
+      setError(true);
+      setMessage(c.editor.saveError);
+    }
   };
 
   const scheduleLine = (campaign: EditableCampaign) =>
@@ -141,8 +173,7 @@ export default function AdsManager({
                       <ActionButton
                         size="sm"
                         onClick={() => {
-                          patchCampaign(campaign.promotionId, { paused: true });
-                          audit("adPaused", campaign);
+                          void updateCampaign(campaign.promotionId, { paused: true });
                         }}
                       >
                         {t.pause}
@@ -152,8 +183,7 @@ export default function AdsManager({
                       <ActionButton
                         size="sm"
                         onClick={() => {
-                          patchCampaign(campaign.promotionId, { paused: false });
-                          audit("adResumed", campaign);
+                          void updateCampaign(campaign.promotionId, { paused: false });
                         }}
                       >
                         {t.resume}
@@ -163,9 +193,9 @@ export default function AdsManager({
                       <ActionButton
                         size="sm"
                         onClick={() => {
-                          patchCampaign(campaign.promotionId, { deleted: true });
-                          audit("adDeleted", campaign);
-                          if (selected) setDraft(campaigns.find((x) => x.promotionId !== campaign.promotionId) ?? campaign);
+                          void updateCampaign(campaign.promotionId, { deleted: true }).then(() => {
+                            if (selected) setDraft(null);
+                          });
                         }}
                       >
                         {t.delete}
@@ -175,8 +205,7 @@ export default function AdsManager({
                       <ActionButton
                         size="sm"
                         onClick={() => {
-                          patchCampaign(campaign.promotionId, { status: "draft", startsAt: undefined });
-                          audit("adCancelled", campaign);
+                          void updateCampaign(campaign.promotionId, { status: "draft", startsAt: undefined });
                         }}
                       >
                         {t.cancel}
@@ -207,8 +236,14 @@ export default function AdsManager({
               image={draft.image}
               alt={title}
               title={t.asset}
-              labels={{ drop: c.editor.drop, upload: c.editor.upload }}
-              onImage={(image) => update({ image })}
+              labels={{
+                drop: c.editor.drop,
+                upload: c.editor.upload,
+                uploading: c.editor.uploading,
+                uploadError: c.editor.uploadError,
+                invalid: c.editor.invalidImage,
+              }}
+              onImage={(image, imageId) => update({ image, imageId })}
             />
             {/* key: the "same text" choice is read again for each ad */}
             <BilingualField key={`${draft.promotionId}-title`} label={t.headline} value={draft.title} onChange={(title) => update({ title })} labels={bilingual} />
@@ -262,7 +297,7 @@ export default function AdsManager({
               </ActionButton>
             </div>
             {message && (
-              <p role="status" className="text-xs text-success">
+              <p role={error ? "alert" : "status"} className={cn("text-xs", error ? "text-critical" : "text-success")}>
                 {message}
               </p>
             )}
@@ -276,14 +311,16 @@ export default function AdsManager({
           </div>
           <article className="max-w-sm overflow-hidden rounded-2xl border border-border bg-card">
             <div className="relative aspect-[3/2]">
-              <Image
-                src={draft.image}
-                alt={previewTitle}
-                fill
-                sizes="(min-width: 1280px) 21rem, 24rem"
-                unoptimized={draft.image.startsWith("blob:")}
-                className="object-cover"
-              />
+              {draft.image && (
+                <Image
+                  src={draft.image}
+                  alt={previewTitle}
+                  fill
+                  sizes="(min-width: 1280px) 21rem, 24rem"
+                  unoptimized={draft.image.startsWith("blob:")}
+                  className="object-cover"
+                />
+              )}
             </div>
             <div className="p-5">
               <Badge>{t.tags[draft.tag]}</Badge>

@@ -8,15 +8,15 @@ import { Panel } from "@/components/portal/ui/Panel";
 import { StageText } from "@/components/portal/ui/Status";
 import { Table, TableFooter, Td, Th, THead, Tr } from "@/components/portal/ui/Table";
 import Icon from "@/components/shared/ui/Icon";
-import { getStaff } from "@/data/staff";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import { cn, fill, formatPrice, plural } from "@/lib/format";
-import { daysAgo } from "@/lib/portal/clock";
 import { formatAmount, formatTime } from "@/lib/portal/format";
-import { countByStage, customerName, inQueueWindow, isActiveOrder, newestFirst, orderTotal } from "@/lib/portal/orders";
+import { customerName, inQueueWindow, isActiveOrder, newestFirst, orderTotal } from "@/lib/portal/orders";
 import { useOrders } from "@/lib/portal/store";
 import { useAudit, useManagers } from "@/lib/portal/staff-store";
+import { useGetAdminOverviewQuery } from "@/lib/redux/api/adminApi";
+import { useGetBusinessQuery } from "@/lib/redux/api/businessApi";
 import { localePath, routes } from "@/lib/routes";
 import { auditText } from "./audit";
 
@@ -27,41 +27,45 @@ export default function AdminOverview({ lang, dict }: { lang: Locale; dict: Dict
   const p = dict.portal;
   const href = (path: string) => localePath(lang, path);
 
-  const orders = useOrders().filter(inQueueWindow).sort(newestFirst);
-  const counts = countByStage(orders);
-  const today = orders.filter((o) => daysAgo(o.placedAt) === 0).length;
-  const completed = orders.filter((o) => o.stage === "completed");
-  const managers = useManagers().filter((m) => !m.invited);
+  const { data: business } = useGetBusinessQuery();
+  const allOrders = useOrders();
+  const queueWindowDays = business?.queueWindowDays;
+  const orders = (queueWindowDays === undefined
+    ? allOrders
+    : allOrders.filter((order) => inQueueWindow(order, queueWindowDays))
+  ).sort(newestFirst);
+  const { data: overview, isError: overviewError } = useGetAdminOverviewQuery();
+  const managers = useManagers();
   const activeManagers = managers.filter((m) => m.status === "active");
   const audit = useAudit().slice(0, 4);
-  const pending = orders.filter((o) => isActiveOrder(o) && o.paymentStatus === "pending").length;
+  const pending = overview?.pendingPayments ?? 0;
 
-  const stats = [
+  const stats = overview ? [
     {
       label: t.stats.orders,
-      value: orders.length,
-      meta: fill(t.stats.ordersMeta, { today, previous: orders.length - today }),
+      value: overview.orders,
+      meta: fill(t.stats.ordersMeta, { today: overview.ordersToday, previous: overview.orders - overview.ordersToday }),
     },
     {
       label: t.stats.active,
-      value: orders.filter(isActiveOrder).length,
-      meta: fill(t.stats.activeMeta, counts),
+      value: overview.activeOrders,
+      meta: fill(t.stats.activeMeta, overview.active),
     },
     {
       label: t.stats.value,
-      value: formatPrice(completed.reduce((sum, o) => sum + orderTotal(o), 0)),
-      meta: fill(t.stats.valueMeta, { count: completed.length }),
+      value: formatPrice(overview.completedValue),
+      meta: fill(t.stats.valueMeta, { count: overview.completedCount }),
     },
     {
       label: t.stats.managers,
-      value: `${activeManagers.length} / ${managers.length}`,
+      value: `${overview.managers.active} / ${overview.managers.total}`,
       meta: fill(t.stats.managersMeta, {
-        on: activeManagers.filter((m) => m.duty === "on").length,
-        off: activeManagers.filter((m) => m.duty === "off").length,
-        suspended: managers.length - activeManagers.length,
+        on: overview.managers.onDuty,
+        off: overview.managers.offDuty,
+        suspended: overview.managers.suspended,
       }),
     },
-  ];
+  ] : [];
 
   const maxActive = Math.max(1, ...activeManagers.map((m) => orders.filter((o) => o.managerId === m.id && isActiveOrder(o)).length));
 
@@ -74,7 +78,8 @@ export default function AdminOverview({ lang, dict }: { lang: Locale; dict: Dict
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map((stat) => (
+        {overviewError && <p role="alert" className="text-sm text-critical">{t.loadError}</p>}
+        {(stats.length ? stats : [t.stats.orders, t.stats.active, t.stats.value, t.stats.managers].map((label) => ({ label, value: "—", meta: "" }))).map((stat) => (
           <div key={stat.label} className="rounded-xl border border-border bg-panel p-5">
             <p className="text-[0.8125rem] text-muted-foreground">{stat.label}</p>
             <p className="mt-3 text-[1.75rem] font-bold leading-none tabular-nums">{stat.value}</p>
@@ -122,7 +127,7 @@ export default function AdminOverview({ lang, dict }: { lang: Locale; dict: Dict
                       <StageText stage={order.stage} label={p.stages[order.stage]} />
                     </Td>
                     <Td className="tabular-nums">{formatAmount(orderTotal(order))}</Td>
-                    <Td>{getStaff(order.managerId)?.name}</Td>
+                    <Td>{order.managerName ?? "—"}</Td>
                   </Tr>
                 ))}
               </tbody>
@@ -141,8 +146,8 @@ export default function AdminOverview({ lang, dict }: { lang: Locale; dict: Dict
                 {audit.map((event) => (
                   <Tr key={event.id}>
                     <Td className="tabular-nums">{formatTime(event.at)}</Td>
-                    <Td>{auditText(event, lang, dict.staff.auditTemplates)}</Td>
-                    <Td>{actorName(event.actorId, p)}</Td>
+                    <Td>{auditText(event, lang)}</Td>
+                    <Td>{actorName(event.actorId)}</Td>
                   </Tr>
                 ))}
               </tbody>
@@ -201,8 +206,6 @@ export default function AdminOverview({ lang, dict }: { lang: Locale; dict: Dict
 }
 
 /** "Eric", "Superadmin" for the owner, as in the designs' audit tables. */
-export function actorName(actorId: string, p: Dictionary["portal"]) {
-  const member = getStaff(actorId);
-  if (!member) return actorId;
-  return member.role === "superadmin" ? p.roles.superadmin : member.name;
+export function actorName(actorId: string) {
+  return actorId;
 }

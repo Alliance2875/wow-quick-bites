@@ -13,6 +13,8 @@ import Icon from "@/components/shared/ui/Icon";
 import { fulfilmentOptions, paymentMethods, type FulfilmentId, type PaymentMethodId } from "@/data/checkout";
 import { localize, type Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
+import { useGetBusinessQuery } from "@/lib/redux/api/businessApi";
+import { useGetMenuBundleQuery } from "@/lib/redux/api/menuApi";
 import { updateSession, useSession } from "@/lib/auth/session";
 import { rememberGuest, useGuest } from "@/lib/guest";
 import { normalizePhone } from "@/lib/phone";
@@ -110,9 +112,23 @@ function CheckoutForm({
   const [fulfilment, setFulfilment] = useState<FulfilmentId>("pickup");
   const [payment, setPayment] = useState<PaymentMethodId>("pay-on-pickup");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const { data: catalogue, isLoading: menuLoading, isError: menuError } = useGetMenuBundleQuery();
+  const { data: businessInfo, isLoading: businessLoading, isError: businessError } = useGetBusinessQuery();
   const href = (path: string) => localePath(lang, path);
 
-  const { count, subtotal, fees, total } = summarize(lines);
+  if (menuLoading || businessLoading) return <div className="min-h-[60vh]" aria-busy="true" />;
+  if (menuError || businessError || !catalogue || !businessInfo) {
+    return <p role="alert" className="page-container py-20 text-center">{t.orderFailed}</p>;
+  }
+
+  const deliveryFees = fulfilment === "delivery" ? businessInfo.fees.delivery : 0;
+  const { count, subtotal, fees, total } = summarize(
+    lines,
+    catalogue.items,
+    catalogue.optionGroups,
+    businessInfo.fees.service + deliveryFees,
+  );
   const items = plural(dict.cart.itemCount, count);
   const method = paymentMethods.find((m) => m.id === payment)!;
   const fulfilmentLabel = localize(fulfilmentOptions.find((f) => f.id === fulfilment)!.label, lang);
@@ -121,7 +137,7 @@ function CheckoutForm({
       ? fill(t.payment.dueOnPickup, { amount: formatPrice(total) })
       : fill(t.payment.dueMobile, { amount: formatPrice(total), method: localize(method.label, lang) });
 
-  const submit = (event: React.FormEvent<HTMLFormElement>) => {
+  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const value = (key: string) => String(form.get(key) ?? "").trim();
@@ -137,19 +153,26 @@ function CheckoutForm({
     if (customer.kind === "guest") rememberGuest({ name: value("name"), phone });
     // Accounts created with Google have no phone yet: keep the one typed here for next time
     else if (!customer.phone) updateSession({ phone });
-    placeOrder({
-      clientName: value("name"),
-      clientCode: customer.kind === "account" ? customer.clientCode : "",
-      guest: customer.kind === "guest" || undefined,
-      phone,
-      email: (customer.kind === "account" && value("email")) || undefined,
-      fulfilment,
-      address: fulfilment === "delivery" ? value("address") : undefined,
-      payment,
-      notes: value("notes") || undefined,
-      lines,
-    });
-    onPlaced();
+    setSubmitting(true);
+    try {
+      await placeOrder({
+        clientName: value("name"),
+        clientCode: customer.kind === "account" ? customer.clientCode : "",
+        guest: customer.kind === "guest" || undefined,
+        phone,
+        email: (customer.kind === "account" && value("email")) || undefined,
+        fulfilment,
+        address: fulfilment === "delivery" ? value("address") : undefined,
+        payment,
+        notes: value("notes") || undefined,
+        lines,
+      });
+      onPlaced();
+    } catch {
+      setError(t.orderFailed);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -309,7 +332,7 @@ function CheckoutForm({
                 {error}
               </p>
             )}
-            <Button type="submit" block size="lg" className="mt-5">
+            <Button type="submit" block size="lg" className="mt-5" disabled={submitting}>
               {fill(t.sidebar.placeOrder, { amount: formatPrice(total) })}
             </Button>
             <p className="mt-3 text-xs text-muted-foreground">{t.sidebar.helper}</p>

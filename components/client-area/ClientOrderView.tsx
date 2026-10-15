@@ -14,7 +14,7 @@ import { addToCart } from "@/lib/cart/cart";
 import { fill, formatPrice, plural } from "@/lib/format";
 import { formatDate, formatTime } from "@/lib/portal/format";
 import { clientTrackerSteps, isActiveOrder, itemCount, orderLines, orderTotal } from "@/lib/portal/orders";
-import { useOrders } from "@/lib/portal/store";
+import { useGetMyOrderQuery } from "@/lib/redux/api/ordersApi";
 import { localePath, routes } from "@/lib/routes";
 import { managerName } from "./content";
 
@@ -33,8 +33,9 @@ export default function ClientOrderView({
   const c = dict.clientArea;
   const p = dict.portal;
   const router = useRouter();
-  // The server page already checked that this order belongs to the client
-  const order = useOrders().find((o) => o.id === orderId)!;
+  const { data: order, isLoading, isError } = useGetMyOrderQuery(orderId);
+  if (isLoading) return <div className="min-h-96" aria-busy="true" />;
+  if (isError || !order) return <p role="alert" className="py-20 text-center">{t.unavailable}</p>;
   const manager = managerName(order, "WOW Quick Bites");
   const total = formatPrice(orderTotal(order));
 
@@ -114,11 +115,11 @@ export default function ClientOrderView({
             <dl className="mt-4 space-y-2 border-t border-border pt-4 text-[0.8125rem]">
               <div className="flex gap-6">
                 <dt className="w-28 text-muted-foreground">{p.common.subtotal}</dt>
-                <dd>{total}</dd>
+                <dd>{formatPrice(order.subtotal ?? orderTotal(order))}</dd>
               </div>
               <div className="flex gap-6">
                 <dt className="w-28 text-muted-foreground">{p.common.fees}</dt>
-                <dd>{formatPrice(0)}</dd>
+                <dd>{formatPrice(order.fees ?? 0)}</dd>
               </div>
             </dl>
             <div className="mt-3 flex items-end justify-between gap-4">

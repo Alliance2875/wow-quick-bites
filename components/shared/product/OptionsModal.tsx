@@ -5,13 +5,12 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/shared/ui/Button";
 import Icon from "@/components/shared/ui/Icon";
 import QuantityStepper from "@/components/shared/ui/QuantityStepper";
-import { getOptionGroups } from "@/data/product-options";
 import type { MenuItem } from "@/data/types";
 import { localize, type Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import { addToCart } from "@/lib/cart/cart";
-import { unitPrice } from "@/lib/cart/pricing";
 import { formatPrice } from "@/lib/format";
+import { useGetOptionGroupsQuery } from "@/lib/redux/api/menuApi";
 import OptionGroupFields from "./OptionGroupFields";
 
 /** Customise-and-add modal (design: "Chips & Marinated Chicken Leg" over the home page). */
@@ -30,6 +29,8 @@ export default function OptionsModal({
   const [choices, setChoices] = useState<string[]>([]);
   const [quantity, setQuantity] = useState(1);
   const [note, setNote] = useState("");
+  const { data: optionGroups = [] } = useGetOptionGroupsQuery();
+  const itemOptionGroups = optionGroups.filter((group) => item.optionGroups?.includes(group.id));
 
   // showModal() gives the backdrop, focus trap and Esc handling for free
   useEffect(() => {
@@ -37,7 +38,13 @@ export default function OptionsModal({
   }, []);
 
   const name = localize(item.name, lang);
-  const total = unitPrice(item.id, choices) * quantity;
+  const total =
+    (item.price +
+      itemOptionGroups
+        .flatMap((group) => group.choices)
+        .filter((choice) => choices.includes(choice.id))
+        .reduce((sum, choice) => sum + choice.price, 0)) *
+    quantity;
 
   const toggle = (id: string) =>
     setChoices((current) => (current.includes(id) ? current.filter((c) => c !== id) : [...current, id]));
@@ -75,7 +82,7 @@ export default function OptionsModal({
             <p className="mt-1 text-sm text-muted-foreground">{localize(item.description, lang)}</p>
           </div>
 
-          {getOptionGroups(item.optionGroups).map((group) => (
+          {itemOptionGroups.map((group) => (
             <OptionGroupFields
               key={group.id}
               group={group}

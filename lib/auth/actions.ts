@@ -1,26 +1,30 @@
 "use server";
 
-import { timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { isLocale, type Locale } from "@/i18n/config";
 import { normalizePhone } from "@/lib/phone";
 import { localePath, routes } from "@/lib/routes";
-import { authenticate, isEmailTaken, register, type AuthResult } from "./directory";
+import { API_BASE_URL, ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE } from "@/lib/api/config";
+import type { Role } from "./roles";
 import {
   clearGoogleProfile,
   clearPending,
   CODE_TTL_MS,
-  MAX_CODE_ATTEMPTS,
   readPending,
   RESEND_DELAY_MS,
-  resendCode,
   savePending,
   startPendingSignUp,
 } from "./flows";
 import { landingPath } from "./landing";
 import type { User } from "./session";
-import { hashCode, SESSION_COOKIE, sessionCookieOptions, signSession, verifySession } from "./token";
+import {
+  SESSION_COOKIE,
+  sessionCookieOptions,
+  signSession,
+  type SessionPayload,
+  verifySession,
+} from "./token";
 
 // Server Actions: credentials are checked and the session cookie is set on the server only.
 
@@ -46,12 +50,51 @@ export type AuthFormState =
 const text = (form: FormData, key: string) => String(form.get(key) ?? "").trim();
 const langOf = (value: string): Locale => (isLocale(value) ? value : "en");
 
+type BackendSession = {
+  id: string;
+  role: Role;
+  name: string;
+  email: string;
+  phone?: string | null;
+  clientCode?: string | null;
+};
+
+type BackendAuthResult = {
+  access: string;
+  refresh: string;
+  user: BackendSession;
+};
+
+type SessionStart = {
+  ok: true;
+  session: SessionPayload;
+  email: string;
+  clientCode?: string;
+};
+
+const sessionStart = (user: BackendSession): SessionStart => ({
+  ok: true,
+  email: user.email,
+  clientCode: user.clientCode || undefined,
+  session: { sub: user.id || user.clientCode || user.email, role: user.role, name: user.name },
+});
+
 async function startSession(
-  result: Extract<AuthResult, { ok: true }>,
-  details: { lang: Locale; next: string; phone?: string },
+  result: SessionStart,
+  details: { lang: Locale; next: string; phone?: string; access?: string; refresh?: string },
 ): Promise<AuthFormState> {
   try {
-    (await cookies()).set(SESSION_COOKIE, await signSession(result.session), sessionCookieOptions);
+    const jar = await cookies();
+    jar.set(SESSION_COOKIE, await signSession(result.session), sessionCookieOptions);
+    if (details.access) {
+      jar.set(ACCESS_TOKEN_COOKIE, details.access, {
+        ...sessionCookieOptions,
+        httpOnly: false,
+      });
+    }
+    if (details.refresh) {
+      jar.set(REFRESH_TOKEN_COOKIE, details.refresh, sessionCookieOptions);
+    }
   } catch {
     return { error: "server" };
   }
@@ -70,47 +113,116 @@ async function startSession(
 export async function signInAction(_: AuthFormState, form: FormData): Promise<AuthFormState> {
   const email = text(form, "email");
   const password = String(form.get("password") ?? "");
+  const lang = langOf(text(form, "lang"));
+  const next = text(form, "next");
   if (!email || !password) return { error: "missing" };
-  const result = authenticate(email, password);
-  return result.ok ? startSession(result, { lang: langOf(text(form, "lang")), next: text(form, "next") }) : { error: result.error };
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/sign-in/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+      cache: "no-store",
+    });
+
+    if (res.ok) {
+      const data = (await res.json()) as BackendAuthResult;
+      return startSession(sessionStart(data.user), {
+        lang,
+        next,
+        phone: data.user.phone || undefined,
+        access: data.access,
+        refresh: data.refresh,
+      });
+    }
+
+    const err = await res.json().catch(() => null);
+    const code = err?.error?.code;
+    if (code === "account_suspended") return { error: "suspended" };
+    if (code === "email_not_verified") return { error: "wait" };
+    if (res.status === 401 || code === "invalid_credentials") return { error: "invalid" };
+    if (res.status === 429) return { error: "tooMany" };
+  } catch {
+    return { error: "server" };
+  }
+
+  return { error: "server" };
 }
 
 /** Step 1 of sign-up: checks the details and emails a 6-digit code. The account exists only once verified. */
 export async function signUpAction(_: AuthFormState, form: FormData): Promise<AuthFormState> {
   const name = text(form, "name");
   const email = text(form, "email").toLowerCase();
+  const password = String(form.get("password") ?? "");
   const lang = langOf(text(form, "lang"));
-  if (!name || !email || String(form.get("password") ?? "").length < 6) return { error: "missing" };
+  const next = text(form, "next");
+  if (!name || !email || password.length < 6) return { error: "missing" };
   const phone = normalizePhone(text(form, "phone"));
   if (!phone) return { error: "phone" };
-  if (isEmailTaken(email)) return { error: "exists" };
+
   try {
-    // The password goes to the backend with POST /auth/sign-up; the mock does not store it
-    await startPendingSignUp({ name, email, phone, lang, next: text(form, "next") });
+    const res = await fetch(`${API_BASE_URL}/auth/sign-up/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, phone, password }),
+      cache: "no-store",
+    });
+
+    if (res.ok) {
+      await startPendingSignUp({ name, email, phone, lang, next });
+      return { verify: localePath(lang, routes.verifyEmail) };
+    }
+
+    const err = await res.json().catch(() => null);
+    const code = err?.error?.code;
+    if (res.status === 409 || code === "email_taken") return { error: "exists" };
+    if (res.status === 422) return { error: "missing" };
   } catch {
     return { error: "server" };
   }
-  return { verify: localePath(lang, routes.verifyEmail) };
+
+  return { error: "server" };
 }
 
 /** Step 2 of sign-up: the code from the email creates the account and signs in. */
 export async function verifyEmailAction(_: AuthFormState, form: FormData): Promise<AuthFormState> {
   const pending = await readPending();
   if (!pending || Date.now() - pending.sentAt > CODE_TTL_MS) return { error: "expired" };
-  if (pending.attempts >= MAX_CODE_ATTEMPTS) return { error: "tooMany" };
 
   const code = text(form, "code").replace(/\D/g, "");
-  const expected = Buffer.from(pending.codeHash, "hex");
-  const actual = Buffer.from(await hashCode(code, pending.email), "hex");
-  if (code.length !== 6 || !timingSafeEqual(actual, expected)) {
-    await savePending({ ...pending, attempts: pending.attempts + 1 });
-    return { error: pending.attempts + 1 >= MAX_CODE_ATTEMPTS ? "tooMany" : "code" };
+  if (code.length !== 6) return { error: "code" };
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/verify-email/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: pending.email, code }),
+      cache: "no-store",
+    });
+
+    if (res.ok) {
+      const data = (await res.json()) as BackendAuthResult;
+      await clearPending();
+      return startSession(sessionStart(data.user), {
+        lang: langOf(pending.lang),
+        next: pending.next,
+        phone: data.user.phone || pending.phone,
+        access: data.access,
+        refresh: data.refresh,
+      });
+    }
+
+    const err = await res.json().catch(() => null);
+    const codeErr = err?.error?.code;
+    if (codeErr === "too_many_attempts" || res.status === 429) return { error: "tooMany" };
+    if (codeErr === "code_expired" || res.status === 410) return { error: "expired" };
+    if (codeErr === "invalid_code" || res.status === 400) return { error: "code" };
+    return { error: "server" };
+  } catch {
+    return { error: "server" };
   }
 
-  const result = register({ name: pending.name, email: pending.email });
-  if (!result.ok) return { error: result.error };
-  await clearPending();
-  return startSession(result, { lang: langOf(pending.lang), next: pending.next, phone: pending.phone });
+  return { error: "server" };
 }
 
 export type ResendState = { sent: true } | { error: "wait" | "expired" } | undefined;
@@ -119,8 +231,24 @@ export async function resendCodeAction(): Promise<ResendState> {
   const pending = await readPending();
   if (!pending) return { error: "expired" };
   if (Date.now() - pending.sentAt < RESEND_DELAY_MS) return { error: "wait" };
-  await resendCode(pending);
-  return { sent: true };
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/verify-email/resend/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: pending.email }),
+      cache: "no-store",
+    });
+    if (res.ok) {
+      await savePending({ ...pending, sentAt: Date.now() });
+      return { sent: true };
+    }
+    if (res.status === 429) return { error: "wait" };
+  } catch {
+    return { error: "expired" };
+  }
+
+  return { error: "expired" };
 }
 
 export type ProfileState = { error: "missing" | "phone" | "expired" | "server" } | { saved: { name: string; phone: string } } | undefined;
@@ -135,7 +263,24 @@ export async function updateProfileAction(_: ProfileState, form: FormData): Prom
   const phone = normalizePhone(text(form, "phone"));
   if (!phone) return { error: "phone" };
 
-  // Backend: PATCH /me { name, phone }. The session carries the display name.
+  // Backend: PATCH /me { name, phone }.
+  const token = jar.get(ACCESS_TOKEN_COOKIE)?.value;
+  if (!token) return { error: "expired" };
+  try {
+    const response = await fetch(`${API_BASE_URL}/me/`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name, phone }),
+        cache: "no-store",
+      });
+    if (!response.ok) return { error: response.status === 401 ? "expired" : "server" };
+  } catch {
+    return { error: "server" };
+  }
+
   try {
     jar.set(SESSION_COOKIE, await signSession({ ...session, name }), sessionCookieOptions);
   } catch {
@@ -146,7 +291,28 @@ export async function updateProfileAction(_: ProfileState, form: FormData): Prom
 
 export async function signOutAction(form: FormData) {
   const jar = await cookies();
+  const refresh = jar.get(REFRESH_TOKEN_COOKIE)?.value;
+  if (refresh) {
+    try {
+      const access = jar.get(ACCESS_TOKEN_COOKIE)?.value;
+      const response = await fetch(`${API_BASE_URL}/auth/sign-out/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(access ? { Authorization: `Bearer ${access}` } : {}),
+        },
+        body: JSON.stringify({ refresh }),
+        cache: "no-store",
+      });
+      if (!response.ok) console.error(`Backend sign-out failed: ${response.status}`);
+    } catch {
+      console.error("Backend sign-out request failed");
+    }
+  }
+
   jar.delete(SESSION_COOKIE);
+  jar.delete(ACCESS_TOKEN_COOKIE);
+  jar.delete(REFRESH_TOKEN_COOKIE);
   await clearGoogleProfile();
   redirect(localePath(langOf(text(form, "lang")), routes.signIn));
 }

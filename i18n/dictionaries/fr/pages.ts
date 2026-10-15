@@ -14,4 +14,10 @@ export const about: AboutDict = {
 export const contact: ContactDict = {
   metaTitle: "Contact",
   title: "Contact",
+  phone: "Téléphone",
+  email: "E-mail",
+  location: "Adresse",
+  hours: "Horaires",
+  loadError: "Impossible de charger les coordonnées de l’établissement.",
+  noDetails: "Les coordonnées ne sont pas encore disponibles.",
 };

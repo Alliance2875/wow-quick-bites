@@ -1,4 +1,3 @@
-import { getStaff } from "@/data/staff";
 import type { OrderStage, PortalOrder } from "@/data/types";
 import { localize, type Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
@@ -8,7 +7,7 @@ import type { PortalNotification } from "@/lib/portal/store";
 
 /** Display name of the manager in charge ("Eric"), or a generic word when unknown. */
 export const managerName = (order: PortalOrder | undefined, fallback: string) =>
-  (order && getStaff(order.managerId)?.name) ?? fallback;
+  order?.managerName ?? fallback;
 
 /** Title and text of an order update: sample updates carry their own, live ones use templates. */
 export function notificationContent(

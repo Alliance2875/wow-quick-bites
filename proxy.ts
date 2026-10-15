@@ -1,9 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getStaff } from "@/data/staff";
 import { defaultLocale, isLocale, LOCALE_COOKIE, locales, type Locale } from "@/i18n/config";
 import { allowedRoles, homeFor } from "@/lib/auth/roles";
 import { SESSION_COOKIE, verifySession } from "@/lib/auth/token";
-import { isActiveWindow } from "@/lib/portal/clock";
 import { localePath, routes } from "@/lib/routes";
 
 // 1. Every page lives under /en or /fr. A URL without a locale (e.g. "/menu") is redirected to
@@ -42,13 +40,7 @@ export async function proxy(request: NextRequest) {
     signIn.searchParams.set("next", pathname + request.nextUrl.search);
     return NextResponse.redirect(signIn);
   }
-  // Menu & Ads: a manager also needs an active content grant (static directory lookup, no I/O)
-  const grant = session.role === "manager" ? getStaff(session.sub)?.contentGrant : undefined;
-  const needsGrant =
-    session.role === "manager" &&
-    (path === routes.adminContent || path.startsWith(`${routes.adminContent}/`)) &&
-    !(grant && isActiveWindow(grant.startsAt, grant.expiresAt));
-  if (!roles.includes(session.role) || needsGrant) {
+  if (!roles.includes(session.role)) {
     return NextResponse.redirect(new URL(localePath(lang, homeFor(session.role)), request.url));
   }
 

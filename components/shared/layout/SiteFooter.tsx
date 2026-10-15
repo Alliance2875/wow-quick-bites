@@ -1,15 +1,20 @@
+"use client";
+
 import Link from "next/link";
+import type { IconName } from "@/components/shared/ui/Icon";
 import Icon from "@/components/shared/ui/Icon";
 import Logo from "@/components/shared/ui/Logo";
-import { categories } from "@/data/categories";
 import { mainNav } from "@/data/navigation";
-import { site } from "@/data/site";
 import { localize, type Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
+import { useGetBusinessQuery } from "@/lib/redux/api/businessApi";
+import { useGetCategoriesQuery } from "@/lib/redux/api/menuApi";
 import { localePath, routes } from "@/lib/routes";
 
 export default function SiteFooter({ lang, dict }: { lang: Locale; dict: Dictionary["common"] }) {
   const href = (path: string) => localePath(lang, path);
+  const { data: business, isError: businessError } = useGetBusinessQuery();
+  const { data: categories = [], isError: categoriesError } = useGetCategoriesQuery();
 
   return (
     <footer className="border-t border-border bg-surface">
@@ -19,10 +24,10 @@ export default function SiteFooter({ lang, dict }: { lang: Locale; dict: Diction
           <p className="mt-3 text-sm text-muted-foreground">{dict.footer.tagline}</p>
           <p className="mt-6 text-sm font-bold">{dict.footer.followUs}</p>
           <ul className="mt-2 flex gap-3 text-muted-foreground">
-            {site.socials.map((social) => (
+            {(business?.socials ?? []).map((social) => (
               <li key={social.label}>
                 <a href={social.href} aria-label={social.label} className="hover:text-accent">
-                  <Icon name={social.icon} />
+                  <Icon name={socialIcon(social.label)} />
                 </a>
               </li>
             ))}
@@ -47,9 +52,12 @@ export default function SiteFooter({ lang, dict }: { lang: Locale; dict: Diction
         </FooterColumn>
 
         <FooterColumn title={dict.footer.owner}>
-          <li>{site.owner}</li>
+          {business?.owner && <li>{business.owner}</li>}
         </FooterColumn>
       </div>
+      {(businessError || categoriesError) && (
+        <p role="alert" className="page-container pb-4 text-xs text-critical">{dict.footer.dataError}</p>
+      )}
       <div className="border-t border-border">
         <p className="page-container py-5 text-xs text-muted-foreground">
           © {new Date().getFullYear()} {dict.brand}. {dict.footer.rights}
@@ -57,6 +65,15 @@ export default function SiteFooter({ lang, dict }: { lang: Locale; dict: Diction
       </div>
     </footer>
   );
+}
+
+function socialIcon(label: string): IconName {
+  const normalized = label.toLowerCase();
+  if (normalized.includes("instagram")) return "instagram";
+  if (normalized.includes("facebook")) return "facebook";
+  if (normalized.includes("youtube")) return "youtube";
+  if (normalized.includes("whatsapp")) return "messageCircle";
+  return "externalLink";
 }
 
 function FooterColumn({ title, children }: { title: string; children: React.ReactNode }) {

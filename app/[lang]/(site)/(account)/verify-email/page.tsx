@@ -13,5 +13,5 @@ export default async function VerifyEmailPage({ params }: PageProps<"/[lang]/ver
   // The pending sign-up (signed HttpOnly cookie) says which email the code was sent to
   const pending = await readPending();
 
-  return <VerifyEmailForm lang={lang} dict={dict.account} email={pending?.email ?? null} devCode={pending?.devCode} />;
+  return <VerifyEmailForm lang={lang} dict={dict.account} email={pending?.email ?? null} />;
 }

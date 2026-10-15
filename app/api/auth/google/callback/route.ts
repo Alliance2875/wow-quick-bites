@@ -1,8 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isLocale, type Locale } from "@/i18n/config";
-import { googleAccount } from "@/lib/auth/directory";
 import { saveGoogleProfile, takeGoogleState } from "@/lib/auth/flows";
 import { fetchGoogleProfile, googleConfig } from "@/lib/auth/google";
+import { API_BASE_URL, ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE } from "@/lib/api/config";
+import type { Role } from "@/lib/auth/roles";
 import { SESSION_COOKIE, sessionCookieOptions, signSession } from "@/lib/auth/token";
 import { localePath, routes } from "@/lib/routes";
 
@@ -17,31 +18,55 @@ export async function GET(request: NextRequest) {
 
   if (!saved || !params.get("state") || params.get("state") !== saved.state) return fail();
 
-  let profile: { email: string; name: string } | null = null;
-  if (params.get("mock") === "1" && !googleConfig() && process.env.NODE_ENV !== "production") {
-    // Development without Google credentials: a demo Google account
-    profile = { email: "google.demo@gmail.com", name: "Google Demo" };
-  } else {
-    const code = params.get("code");
-    if (!code) return fail();
-    profile = await fetchGoogleProfile(request, code, saved.verifier);
-  }
+  const code = params.get("code");
+  if (!code || !googleConfig()) return fail();
+  const profile = await fetchGoogleProfile(request, code, saved.verifier);
   if (!profile) return fail();
 
-  const account = googleAccount(profile);
-  if (!account.ok) return fail();
+  let data: {
+    access: string;
+    refresh: string;
+    user: {
+      id: string;
+      role: Role;
+      name: string;
+      email: string;
+      phone?: string | null;
+      clientCode?: string | null;
+    };
+  };
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/google/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Frontend-Secret": process.env.BACKEND_FRONTEND_SECRET ?? "",
+      },
+      body: JSON.stringify({ email: profile.email, name: profile.name }),
+      cache: "no-store",
+    });
+    if (!res.ok) return fail();
+    data = await res.json();
+  } catch {
+    return fail();
+  }
 
   const response = NextResponse.redirect(new URL(localePath(lang, routes.finishSignIn), request.url));
   response.cookies.set(
     SESSION_COOKIE,
-    await signSession(account.session),
+    await signSession({ sub: data.user.id, role: data.user.role, name: data.user.name }),
     sessionCookieOptions,
   );
+  response.cookies.set(ACCESS_TOKEN_COOKIE, data.access, {
+    ...sessionCookieOptions,
+    httpOnly: false,
+  });
+  response.cookies.set(REFRESH_TOKEN_COOKIE, data.refresh, sessionCookieOptions);
   await saveGoogleProfile({
-    name: account.session.name,
-    email: account.email,
-    phone: account.phone,
-    clientCode: account.clientCode ?? "",
+    name: data.user.name,
+    email: data.user.email,
+    phone: data.user.phone || undefined,
+    clientCode: data.user.clientCode ?? "",
     lang,
     next: saved.next,
   });

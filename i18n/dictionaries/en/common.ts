@@ -25,6 +25,7 @@ export const common = {
     orderNow: "Order now",
     categories: "Categories",
     owner: "Owner",
+    dataError: "Some business information could not be loaded.",
     rights: "All rights reserved.",
   },
   dish: {

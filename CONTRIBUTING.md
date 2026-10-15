@@ -24,7 +24,7 @@ If something from your feature is needed by a second feature, move it to `compon
 
 - **Strings**: no text in JSX. Add the key in `i18n/dictionaries/en/<feature>.ts` **and** `fr/<feature>.ts` (TypeScript fails if FR is missing). Variables use `{name}` + `fill()`.
   French typography: non-breaking space before `? : ; !` (`"Nouveau ici ?"`).
-- **Content** (dishes, promotions…): goes in `data/`, both languages side by side: `name: { en: "…", fr: "…" }`, read with `localize(value, lang)`.
+- **Business content** (menu, categories, promotions, contact): read from the backend through RTK Query. Keep bilingual UI copy in the locale dictionaries.
 - **Links**: `localePath(lang, routes.menu)` — never hard-code `/en/...`.
 - **Colours**: only theme utilities (`bg-card`, `text-accent`, `bg-soft`, `border-border`…). Need a new colour? Add a token in `app/globals.css` for both themes.
   `dark:` / `light:` variants follow the theme toggle (not the OS).
@@ -40,16 +40,12 @@ If something from your feature is needed by a second feature, move it to `compon
 2. Add the path to `lib/routes.ts`.
 3. Put its components in `components/<feature>/` and its strings in a new dictionary file (`en/` + `fr/`, registered in both `index.ts`).
 
-## 5. Mocks to replace when the backend is ready
+## 5. Backend data and local state
 
-| Mock | File | Replace with |
+| Domain | Source of truth |
 |---|---|---|
-| Menu, promotions, options | `data/*.ts` | API calls in the pages (server side) |
-| Sign in / sign up | `lib/auth/directory.ts` (`authenticate`, `register`) | Auth API — the session cookie, proxy and DAL stay |
-| Portal orders, chat, notifications | `lib/portal/store.ts` + `data/orders.ts`, `messages.ts`, `notifications.ts` | Orders / messages API |
-| Menu & Ads, business settings | `lib/portal/content-store.ts` | Content API (uploads included) |
-| Managers, grants, audit | `lib/portal/staff-store.ts` + `data/staff.ts`, `audit.ts` | Staff / audit API |
-| Portal clock | `lib/portal/clock.ts` (`portalNow`) | `Date.now()` once orders are live |
-| Cart | `lib/cart/cart.ts` | Cart API (keep the same exported functions) |
-| Order placement | `lib/orders.ts` | `POST /orders` |
-| Password recovery | `components/account/ForgotPasswordFlow.tsx` | Reset-email API (the "I opened the link" button is a stand-in) |
+| Catalogue, business contact, promotions | Backend API through `lib/redux/api/*` |
+| Orders, notifications, staff, audit, admin content | Backend API through RTK Query; portal stores expose the hooks |
+| Sign-in, sign-up, verification, password flows | Backend API through server actions / RTK Query; DAL verifies the current user |
+| Cart draft | Browser-local cart state; prices and availability are refreshed from the API before checkout |
+| Presentation copy, navigation, payment labels | Locale dictionaries and UI configuration; not backend business records |

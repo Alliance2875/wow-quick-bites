@@ -3,7 +3,6 @@ import { Eyebrow, Panel } from "@/components/portal/ui/Panel";
 import PageHeader from "@/components/portal/ui/PageHeader";
 import { Badge } from "@/components/portal/ui/Status";
 import Icon from "@/components/shared/ui/Icon";
-import { getStaff } from "@/data/staff";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import type { Viewer } from "@/lib/auth/dal";
@@ -31,8 +30,7 @@ export default function ContentWorkspace({
   const admin = viewer.role === "superadmin";
   const can = (permission: Viewer["permissions"][number]) => viewer.permissions.includes(permission);
   const grant = viewer.contentGrant;
-  const member = getStaff(viewer.id);
-  const scoped = { id: viewer.id, permissions: viewer.permissions };
+  const scoped = { id: viewer.id, name: viewer.name, permissions: viewer.permissions };
 
   return (
     <div className="space-y-10">
@@ -60,8 +58,8 @@ export default function ContentWorkspace({
             <div className="grid gap-6 md:grid-cols-[18rem_minmax(0,1fr)]">
               <div className="space-y-2 text-[0.8125rem]">
                 <Eyebrow>{t.grant.grantedBy}</Eyebrow>
-                <p className="font-semibold">{fill(t.grant.grantor, { name: getStaff(grant.grantedBy)?.name ?? "" })}</p>
-                <p>{fill(t.grant.role, { assignment: member ? dict.portal.assignment[member.assignment] : "" })}</p>
+                <p className="font-semibold">{fill(t.grant.grantor, { name: grant.grantedBy })}</p>
+                {viewer.assignment && <p>{fill(t.grant.role, { assignment: dict.portal.assignment[viewer.assignment] })}</p>}
                 <p>
                   {grant.expiresAt
                     ? fill(t.grant.expiry, { date: `${formatDate(grant.expiresAt)}, ${formatTime(grant.expiresAt)}` })
@@ -94,8 +92,8 @@ export default function ContentWorkspace({
       {admin && (
         <div className="space-y-6">
           <div className="grid gap-6 xl:grid-cols-2">
-            <BusinessPanel lang={lang} viewerId={viewer.id} dict={dict} />
-            <PublishingPanel lang={lang} viewerId={viewer.id} dict={dict} />
+            <BusinessPanel lang={lang} dict={dict} />
+            <PublishingPanel lang={lang} dict={dict} />
           </div>
           <AuditPanel lang={lang} dict={dict} />
         </div>

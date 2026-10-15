@@ -1,11 +1,11 @@
 "use client";
 
 import Icon from "@/components/shared/ui/Icon";
-import { categories } from "@/data/categories";
 import type { CategoryId } from "@/data/types";
 import { localize, type Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import { cn } from "@/lib/format";
+import { useGetCategoriesQuery } from "@/lib/redux/api/menuApi";
 
 export const menuTabs = ["all", "food", "drinks"] as const;
 export type MenuTab = (typeof menuTabs)[number];
@@ -30,6 +30,8 @@ export default function MenuFilters({
   query: string;
   onQueryChange: (query: string) => void;
 }) {
+  const { data: categories = [] } = useGetCategoriesQuery();
+
   return (
     <>
       <div className="mt-10 grid items-center gap-4 md:grid-cols-[1fr_auto_1fr]">

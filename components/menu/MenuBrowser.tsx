@@ -2,24 +2,24 @@
 
 import { useMemo, useState } from "react";
 import DishCard from "@/components/shared/product/DishCard";
-import { drinkSections, menuItems } from "@/data/menu";
-import { tags } from "@/data/tags";
 import type { CategoryId, MenuItem } from "@/data/types";
-import { localize, type Locale } from "@/i18n/config";
+import { localize, type Locale, type Localized } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
+import { useGetMenuBundleQuery } from "@/lib/redux/api/menuApi";
 import MenuFilters, { type MenuTab } from "./MenuFilters";
 
 const GRID = "grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4";
+
 
 /** Lower case without accents: "Crème" and "creme" match. */
 const normalize = (text: string) =>
   text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
-function matches(item: MenuItem, lang: Locale, query: string) {
+function matches(item: MenuItem, lang: Locale, query: string, activeTags: Record<string, Localized>) {
   const text = [
     localize(item.name, lang),
     localize(item.description, lang),
-    ...item.tags.map((tag) => localize(tags[tag], lang)),
+    ...item.tags.map((tag) => (activeTags[tag] ? localize(activeTags[tag], lang) : tag)),
   ];
   return normalize(text.join(" ")).includes(query);
 }
@@ -39,14 +39,25 @@ export default function MenuBrowser({
   const [category, setCategory] = useState<CategoryId | null>(initialCategory);
   const [query, setQuery] = useState("");
 
+  const { data: menuBundle } = useGetMenuBundleQuery();
+  const menuItems = menuBundle?.items;
+  const drinkSections = menuBundle?.drinkSections ?? [];
+
+  const tags = useMemo(
+    () => menuBundle?.tags ?? {},
+    [menuBundle?.tags],
+  );
+
   const items = useMemo(() => {
     const q = normalize(query.trim());
-    return menuItems.filter((item) => {
+    return (menuItems ?? []).filter((item) => {
       if (tab !== "all" && item.group !== tab) return false;
       if (category && !item.categories.includes(category)) return false;
-      return !q || matches(item, lang, q);
+      return !q || matches(item, lang, q, tags);
     });
-  }, [tab, category, query, lang]);
+  }, [menuItems, tags, tab, category, query, lang]);
+
+
 
   const card = (item: MenuItem) => <DishCard key={item.id} item={item} lang={lang} dict={common} />;
 

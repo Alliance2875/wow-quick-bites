@@ -1,6 +1,4 @@
-import { business } from "@/data/business";
-import { getClient } from "@/data/clients";
-import { getMenuItem } from "@/data/menu";
+import type { MenuItem } from "@/data/types";
 import type { OrderStage, PortalOrder } from "@/data/types";
 import { localize, type Locale } from "@/i18n/config";
 import { daysAgo } from "./clock";
@@ -21,13 +19,29 @@ export const nextStage: Partial<Record<OrderStage, OrderStage>> = {
 export const isActiveOrder = (order: PortalOrder) => order.stage !== "completed" && order.stage !== "cancelled";
 
 export function orderLines(order: PortalOrder) {
-  return order.lines.flatMap((line) => {
-    const item = getMenuItem(line.itemId);
-    return item ? [{ ...line, item, unit: item.price, total: item.price * line.quantity }] : [];
+  return order.lines.map((line) => {
+    const name = line.name ?? { en: line.itemId, fr: line.itemId };
+    const item: MenuItem = {
+      id: line.itemId,
+      name,
+      description: { en: "", fr: "" },
+      price: line.unitPrice ?? 0,
+      image: "/logo.png",
+      group: "food",
+      categories: [],
+      tags: [],
+    };
+    return {
+      ...line,
+      item,
+      unit: line.unitPrice ?? 0,
+      total: line.total ?? (line.unitPrice ?? 0) * line.quantity,
+    };
   });
 }
 
-export const orderTotal = (order: PortalOrder) => orderLines(order).reduce((sum, line) => sum + line.total, 0);
+export const orderTotal = (order: PortalOrder) =>
+  order.total ?? orderLines(order).reduce((sum, line) => sum + line.total, 0);
 
 export const itemCount = (order: PortalOrder) => order.lines.reduce((sum, line) => sum + line.quantity, 0);
 
@@ -41,15 +55,15 @@ export const itemsSummary = (order: PortalOrder, lang: Locale) =>
 export const customerKey = (order: PortalOrder) => (order.guest ? `guest:${order.contact?.phone ?? order.id}` : order.clientCode);
 
 /** Name shown to staff: the one given at checkout, else the client account's name. */
-export const customerName = (order: PortalOrder) => order.contact?.name ?? getClient(order.clientCode)?.name ?? "";
+export const customerName = (order: PortalOrder) => order.contact?.name ?? order.clientName ?? "";
 
 /** Phone the manager can call about the order. */
-export const customerPhone = (order: PortalOrder) => order.contact?.phone ?? getClient(order.clientCode)?.phone;
+export const customerPhone = (order: PortalOrder) => order.contact?.phone;
 
 export const newestFirst = (a: PortalOrder, b: PortalOrder) => Date.parse(b.placedAt) - Date.parse(a.placedAt);
 
-/** Orders shown in the register queue: the last few days (business.queueWindowDays). */
-export const inQueueWindow = (order: PortalOrder) => daysAgo(order.placedAt) < business.queueWindowDays;
+/** Orders shown in the register queue according to the business settings. */
+export const inQueueWindow = (order: PortalOrder, days: number) => daysAgo(order.placedAt) < days;
 
 export function countByStage(orders: PortalOrder[]) {
   const counts: Record<OrderStage, number> = { new: 0, accepted: 0, preparing: 0, ready: 0, completed: 0, cancelled: 0 };

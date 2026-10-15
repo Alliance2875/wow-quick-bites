@@ -1,9 +1,4 @@
-import { business } from "@/data/business";
-
-// Single source of "now" for the portal. The mock data is a snapshot (business.sampleNow);
-// switch this to Date.now() when orders come from the backend.
-
-export const portalNow = () => new Date(business.sampleNow).getTime();
+export const portalNow = () => Date.now();
 
 const DAY = 24 * 60 * 60 * 1000;
 

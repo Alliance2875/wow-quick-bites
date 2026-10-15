@@ -1,66 +1,109 @@
 import "server-only";
+
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
-import { getStaff } from "@/data/staff";
 import type { ContentGrant } from "@/data/types";
 import type { Locale } from "@/i18n/config";
-import { isActiveWindow } from "@/lib/portal/clock";
+import { API_BASE_URL, ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE } from "@/lib/api/config";
 import { localePath, routes } from "@/lib/routes";
-import { grantScopes, homeFor, rolePermissions, type Permission, type Role } from "./roles";
-import { SESSION_COOKIE, verifySession } from "./token";
+import { SESSION_COOKIE, sessionCookieOptions, verifySession } from "./token";
+import { homeFor, isRole, type Permission, type Role } from "./roles";
 
-// Data Access Layer: the authoritative access check. proxy.ts only does fast, optimistic
-// redirects; every portal page calls requireViewer() before reading data, so a stale cookie,
-// a suspended manager or an expired content grant is caught here.
-
-/** What the portal may know about the signed-in person (a DTO: no email, phone or token). */
 export type Viewer = {
   id: string;
   role: Role;
   name: string;
-  /** Clients only */
+  assignment?: "pickup-register" | "backup" | "none";
   clientCode?: string;
   permissions: Permission[];
-  /** Managers with an active temporary content grant */
   contentGrant?: ContentGrant;
 };
 
-export const getViewer = cache(async (): Promise<Viewer | null> => {
-  const session = await verifySession((await cookies()).get(SESSION_COOKIE)?.value);
-  if (!session) return null;
+type SessionUser = {
+  id: string;
+  role: Role;
+  name: string;
+  email: string;
+  phone: string | null;
+  clientCode?: string | null;
+  permissions: string[];
+  contentGrant: ContentGrant | null;
+};
 
-  if (session.role === "client") {
-    // The session carries the current display name (updated from the profile page)
-    return {
-      id: session.sub,
-      role: "client",
-      name: session.name,
-      clientCode: session.sub,
-      permissions: [],
-    };
+type RefreshedTokens = { access: string; refresh?: string };
+
+const knownPermissions: Permission[] = [
+  "overview:view",
+  "orders:process",
+  "menu:edit",
+  "labels:edit",
+  "ads:manage",
+  "content:publish",
+  "managers:manage",
+  "business:edit",
+];
+
+async function fetchCurrentUser(access: string) {
+  return fetch(`${API_BASE_URL}/auth/me/`, {
+    headers: { Authorization: `Bearer ${access}` },
+    cache: "no-store",
+  });
+}
+
+async function currentUserFromBackend() {
+  const jar = await cookies();
+  const access = jar.get(ACCESS_TOKEN_COOKIE)?.value;
+  const refresh = jar.get(REFRESH_TOKEN_COOKIE)?.value;
+
+  let response = access ? await fetchCurrentUser(access) : null;
+  if ((!response || response.status === 401) && refresh) {
+    const refreshedResponse = await fetch(`${API_BASE_URL}/auth/refresh/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh }),
+      cache: "no-store",
+    });
+    if (refreshedResponse.ok) {
+      const refreshed = (await refreshedResponse.json()) as RefreshedTokens;
+      jar.set(ACCESS_TOKEN_COOKIE, refreshed.access, { ...sessionCookieOptions, httpOnly: false });
+      if (refreshed.refresh) {
+        jar.set(REFRESH_TOKEN_COOKIE, refreshed.refresh, sessionCookieOptions);
+      }
+      response = await fetchCurrentUser(refreshed.access);
+    } else if (refreshedResponse.status >= 500) {
+      throw new Error(`Backend token refresh failed with HTTP ${refreshedResponse.status}.`);
+    }
   }
 
-  // Staff: the directory decides, not the cookie (role changes and suspensions apply at once)
-  const member = getStaff(session.sub);
-  if (!member || member.status === "suspended") return null;
+  if (!response || response.status === 401 || response.status === 403) return null;
+  if (!response.ok) throw new Error(`Backend profile lookup failed with HTTP ${response.status}.`);
 
-  const grant =
-    member.role === "manager" && member.contentGrant && isActiveWindow(member.contentGrant.startsAt, member.contentGrant.expiresAt)
-      ? member.contentGrant
-      : undefined;
-  const permissions = new Set<Permission>(rolePermissions[member.role]);
-  grant?.scopes.forEach((scope) => grantScopes[scope].forEach((permission) => permissions.add(permission)));
+  const user = (await response.json()) as SessionUser;
+  if (!isRole(user.role) || !user.id || !user.name || !Array.isArray(user.permissions)) {
+    throw new Error("Backend returned an invalid signed-in user.");
+  }
+  return {
+    id: user.id,
+    role: user.role,
+    name: user.name,
+    clientCode: user.clientCode ?? undefined,
+    permissions: user.permissions.filter((permission): permission is Permission =>
+      knownPermissions.includes(permission as Permission),
+    ),
+    contentGrant: user.contentGrant ?? undefined,
+  } satisfies Viewer;
+}
 
-  return { id: member.id, role: member.role, name: member.name, permissions: [...permissions], contentGrant: grant };
+export const getViewer = cache(async (): Promise<Viewer | null> => {
+  const jar = await cookies();
+  const session = await verifySession(jar.get(SESSION_COOKIE)?.value);
+  if (!session) return null;
+  return currentUserFromBackend();
 });
 
 export const can = (viewer: Viewer, permission: Permission) => viewer.permissions.includes(permission);
 
-/**
- * For portal pages: returns the viewer, or redirects — to sign-in when signed out, to the
- * person's own home when the role or permissions do not allow this page.
- */
 export async function requireViewer(
   lang: Locale,
   path: string,
@@ -71,7 +114,8 @@ export async function requireViewer(
     redirect(`${localePath(lang, routes.signIn)}?next=${encodeURIComponent(localePath(lang, path))}`);
   }
   const allowed =
-    rule.roles.includes(viewer.role) && (!rule.anyPermission || rule.anyPermission.some((p) => can(viewer, p)));
+    rule.roles.includes(viewer.role) &&
+    (!rule.anyPermission || rule.anyPermission.some((permission) => can(viewer, permission)));
   if (!allowed) redirect(localePath(lang, homeFor(viewer.role)));
   return viewer;
 }

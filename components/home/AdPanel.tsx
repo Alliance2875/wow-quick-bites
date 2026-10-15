@@ -1,12 +1,14 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { Fragment } from "react";
 import Icon from "@/components/shared/ui/Icon";
-import { promotions } from "@/data/promotions";
 import type { Promotion } from "@/data/types";
 import { localize, type Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import { cn, fill } from "@/lib/format";
+import { useGetPromotionsQuery } from "@/lib/redux/api/promotionsApi";
 import { localePath } from "@/lib/routes";
 
 /** Sticky "ADVERTISEMENT" column next to Popular Dishes: 3 promotions stacked like a ticket. */
@@ -19,6 +21,8 @@ export default function AdPanel({
   brand: string;
   dict: Dictionary["home"]["ad"];
 }) {
+  const { data: promotions = [] } = useGetPromotionsQuery({ placement: "home-offers" });
+
   return (
     <aside
       aria-label={dict.title}

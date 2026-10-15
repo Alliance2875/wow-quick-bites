@@ -22,9 +22,29 @@ const store = createStore<User | null>("wqb-session", null);
 
 export const useSession = store.useValue;
 
-export const rememberSession = (user: User) => store.set(user);
+export const rememberSession = (user: User) => {
+  store.set(user);
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.setItem("wqb_user", JSON.stringify(user));
+    } catch {
+      // ignore
+    }
+  }
+};
 
-export const forgetSession = () => store.set(null);
+export const forgetSession = () => {
+  store.set(null);
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.removeItem("wqb_user");
+      localStorage.removeItem("wqb_token");
+      localStorage.removeItem("wqb_refresh");
+    } catch {
+      // ignore
+    }
+  }
+};
 
 /** Updates the display copy (profile edits, phone typed at checkout). */
 export const updateSession = (patch: Partial<Pick<User, "name" | "phone">>) =>

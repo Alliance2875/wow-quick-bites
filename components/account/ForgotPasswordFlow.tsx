@@ -7,39 +7,52 @@ import { TextField } from "@/components/shared/ui/Field";
 import Icon from "@/components/shared/ui/Icon";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import { cn } from "@/lib/format";
+import { useForgotPasswordMutation, useResetPasswordMutation } from "@/lib/redux/api/authApi";
 import PasswordField from "./PasswordField";
 
 type Step = "request" | "sent" | "reset" | "success";
 
 /**
- * Password recovery card. The design shows the 4 states side by side as previews;
- * here they replace each other, in order: request → email sent → new password → success.
- * MOCK: no email is sent yet — "I opened the link" stands in for the link in the email.
+ * Password recovery card. The email and reset token are handled by the backend.
  */
 export default function ForgotPasswordFlow({
   dict,
   fields,
   signInHref,
+  token,
 }: {
   dict: Dictionary["account"]["recovery"];
   fields: Dictionary["account"]["fields"];
   signInHref: string;
+  token?: string;
 }) {
-  const [step, setStep] = useState<Step>("request");
+  const [step, setStep] = useState<Step>(token ? "reset" : "request");
   const [error, setError] = useState("");
+  const [email, setEmail] = useState("");
+  const [requestReset, { isLoading: requesting }] = useForgotPasswordMutation();
+  const [resetPasswordRequest, { isLoading: resetting }] = useResetPasswordMutation();
   const passwordLabels = { show: fields.showPassword, hide: fields.hidePassword };
 
   const kicker = (text: string) => <p className="text-[0.6875rem] font-bold uppercase tracking-wide text-accent">{text}</p>;
 
-  const resetPassword = (event: React.FormEvent<HTMLFormElement>) => {
+  const resetPassword = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     if (form.get("password") !== form.get("confirm")) {
       setError(dict.reset.mismatch);
       return;
     }
+    if (!token) {
+      setError(dict.errors.server);
+      return;
+    }
     setError("");
-    setStep("success");
+    try {
+      await resetPasswordRequest({ token, password: String(form.get("password")) }).unwrap();
+      setStep("success");
+    } catch {
+      setError(dict.errors.server);
+    }
   };
 
   return (
@@ -52,9 +65,18 @@ export default function ForgotPasswordFlow({
     >
       {step === "request" && (
         <form
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
-            setStep("sent");
+            const form = new FormData(e.currentTarget);
+            const value = String(form.get("email") ?? "").trim();
+            setEmail(value);
+            setError("");
+            try {
+              await requestReset({ email: value }).unwrap();
+              setStep("sent");
+            } catch {
+              setError(dict.errors.server);
+            }
           }}
         >
           {kicker(dict.request.kicker)}
@@ -72,6 +94,7 @@ export default function ForgotPasswordFlow({
           <Button type="submit" block size="lg" className="mt-5">
             {dict.request.submit}
           </Button>
+          {error && <p role="alert" className="mt-3 text-sm font-semibold text-danger">{error}</p>}
           <p className="mt-4 text-xs text-muted-foreground">{dict.request.note}</p>
           <Link href={signInHref} className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-accent hover:underline">
             <Icon name="arrowLeft" className="h-4 w-4" /> {dict.request.back}
@@ -88,12 +111,24 @@ export default function ForgotPasswordFlow({
           <h2 className="mt-4 text-2xl">{dict.sent.title}</h2>
           <p className="mt-3 text-muted-foreground">{dict.sent.text}</p>
           <p className="mt-3 text-xs text-muted-foreground">{dict.sent.note}</p>
-          <Button variant="secondary" block className="mt-5">
+          <Button
+            type="button"
+            variant="secondary"
+            block
+            className="mt-5"
+            disabled={requesting}
+            onClick={async () => {
+              setError("");
+              try {
+                await requestReset({ email }).unwrap();
+              } catch {
+                setError(dict.errors.server);
+              }
+            }}
+          >
             {dict.sent.resend}
           </Button>
-          <Button block className="mt-3" onClick={() => setStep("reset")}>
-            {dict.sent.openLink}
-          </Button>
+          {error && <p role="alert" className="mt-3 text-sm font-semibold text-danger">{error}</p>}
           <button
             type="button"
             onClick={() => setStep("request")}
@@ -131,7 +166,7 @@ export default function ForgotPasswordFlow({
               {error}
             </p>
           )}
-          <Button type="submit" block size="lg">
+          <Button type="submit" block size="lg" disabled={resetting}>
             {dict.reset.submit}
           </Button>
         </form>

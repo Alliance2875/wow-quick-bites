@@ -131,6 +131,7 @@ export const clientArea: ClientAreaDict = {
   },
   order: {
     title: "Commande {id}",
+    unavailable: "Impossible de charger cette commande. Veuillez réessayer.",
     subtitle: "Passée le {date} à {time} · {fulfilment} · Gérée par {manager}",
     back: "Mes commandes",
     status: {
@@ -196,6 +197,7 @@ export const clientArea: ClientAreaDict = {
   },
   notifications: {
     title: "Notifications",
+    mutationError: "La mise à jour de la notification a échoué. Veuillez réessayer.",
     subtitle: "Mises à jour des commandes de {name} · {code}. Chaque mise à jour correspond à son propre achat.",
     markAll: "Tout marquer comme lu",
     filters: { all: "Toutes les mises à jour", unread: "Non lue" },

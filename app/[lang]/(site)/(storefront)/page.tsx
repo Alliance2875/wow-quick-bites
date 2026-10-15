@@ -2,10 +2,9 @@ import AdPanel from "@/components/home/AdPanel";
 import CategoryStrip from "@/components/home/CategoryStrip";
 import FeaturesBar from "@/components/home/FeaturesBar";
 import HeroSection from "@/components/home/HeroSection";
-import DishCard from "@/components/shared/product/DishCard";
+import { NewDishes, PopularDishes } from "@/components/home/HomeDishes";
 import Container from "@/components/shared/ui/Container";
 import SectionHeader from "@/components/shared/ui/SectionHeader";
-import { newItems, popularItems } from "@/data/menu";
 import { resolveLang } from "@/i18n/get-dictionary";
 import { localePath, routes } from "@/lib/routes";
 
@@ -25,22 +24,14 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
             action={{ label: dict.home.popular.seeAll, href: localePath(lang, routes.menu) }}
           />
           <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_18.125rem]">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
-              {popularItems.map((item) => (
-                <DishCard key={item.id} item={item} lang={lang} dict={dict.common} />
-              ))}
-            </div>
+            <PopularDishes lang={lang} dict={dict.common} />
             <AdPanel lang={lang} brand={dict.common.brand} dict={dict.home.ad} />
           </div>
         </section>
 
         <section>
           <SectionHeader title={dict.home.newOnMenu.title} />
-          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
-            {newItems.map((item) => (
-              <DishCard key={item.id} item={item} lang={lang} dict={dict.common} />
-            ))}
-          </div>
+          <NewDishes lang={lang} dict={dict.common} />
         </section>
 
         <FeaturesBar lang={lang} label={dict.home.features.label} />

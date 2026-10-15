@@ -1,3 +1,5 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import NewBadge from "@/components/shared/ui/NewBadge";
@@ -8,6 +10,7 @@ import { localize, type Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import { formatPrice } from "@/lib/format";
 import { localePath, routes } from "@/lib/routes";
+import { useGetTagsQuery } from "@/lib/redux/api/menuApi";
 import OrderButton from "./OrderButton";
 
 /** Menu item card used on the home page and the menu page. */
@@ -22,6 +25,7 @@ export default function DishCard({
   dict: Dictionary["common"];
   imageSizes?: string;
 }) {
+  const { data: tags = {} } = useGetTagsQuery();
   const name = localize(item.name, lang);
   const labels = dict.dish;
   const href = localePath(lang, routes.product(item.id));
@@ -47,7 +51,7 @@ export default function DishCard({
         <p className="line-clamp-2 text-xs text-muted-foreground">{localize(item.description, lang)}</p>
         <div className="flex flex-wrap gap-1">
           {item.tags.map((tag) => (
-            <Tag key={tag}>{tagLabel(tag, lang)}</Tag>
+            <Tag key={tag}>{tagLabel(tag, lang, tags)}</Tag>
           ))}
         </div>
         <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-3">

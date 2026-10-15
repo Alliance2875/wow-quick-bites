@@ -9,27 +9,41 @@ import { Eyebrow, Panel } from "@/components/portal/ui/Panel";
 import Icon from "@/components/shared/ui/Icon";
 import NewBadge from "@/components/shared/ui/NewBadge";
 import Tag from "@/components/shared/ui/Tag";
-import { categories } from "@/data/categories";
-import { drinkSections } from "@/data/menu";
-import { superadmin } from "@/data/staff";
 import { tagLabel } from "@/data/tags";
-import type { CategoryId, DrinkSectionId, MenuGroup } from "@/data/types";
+import type { MenuGroup } from "@/data/types";
 import { localize, type Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import type { Permission } from "@/lib/auth/roles";
 import { cn, fill, formatPrice, plural } from "@/lib/format";
 import { saveItem, useMenuItems, type EditableItem } from "@/lib/portal/content-store";
-import { recordAudit } from "@/lib/portal/staff-store";
+import { useGetCategoriesQuery, useGetDrinkSectionsQuery, useGetTagsQuery } from "@/lib/redux/api/menuApi";
 import ImageDrop from "./ImageDrop";
 
 type Filter = "all" | MenuGroup;
 type Availability = "all" | "available" | "unavailable";
 
-const foodCategories = categories.filter((category) => category.id !== "drinks");
-
 /** "food:burgers" / "drinks:smoothies" */
 const categoryValue = (item: Pick<EditableItem, "group" | "categories" | "section">) =>
-  item.group === "drinks" ? `drinks:${item.section ?? drinkSections[0].id}` : `food:${item.categories[0] ?? "burgers"}`;
+  item.group === "drinks" ? `drinks:${item.section ?? ""}` : `food:${item.categories[0] ?? ""}`;
+
+const blankItem = (
+  group: MenuGroup,
+  firstFoodCategory?: string,
+  firstDrinkSection?: string,
+): EditableItem => ({
+  id: "new-item",
+  name: { en: "", fr: "" },
+  description: { en: "", fr: "" },
+  price: 0,
+  image: "",
+  group,
+  section: group === "drinks" ? firstDrinkSection : undefined,
+  categories: group === "drinks" ? ["drinks"] : firstFoodCategory ? [firstFoodCategory] : [],
+  tags: [],
+  available: true,
+  state: "draft",
+  isDraftNew: true,
+});
 
 export default function MenuManager({
   lang,
@@ -37,17 +51,22 @@ export default function MenuManager({
   dict,
 }: {
   lang: Locale;
-  viewer: { id: string; permissions: Permission[] };
+  viewer: { id: string; name: string; permissions: Permission[] };
   dict: Pick<Dictionary, "portal" | "staff">;
 }) {
   const t = dict.staff.content;
   const p = dict.portal;
   const can = (permission: Permission) => viewer.permissions.includes(permission);
+  const { data: categories = [], isError: categoriesError } = useGetCategoriesQuery();
+  const { data: drinkSections = [], isError: sectionsError } = useGetDrinkSectionsQuery();
+  const { data: tags = {}, isError: tagsError } = useGetTagsQuery();
+  const foodCategories = categories.filter((category) => category.id !== "drinks");
   const items = useMenuItems();
   const [filter, setFilter] = useState<Filter>("all");
   const [availability, setAvailability] = useState<Availability>("all");
   const [query, setQuery] = useState("");
-  const [draft, setDraft] = useState<EditableItem>(() => items.find((i) => i.id === "mango-smoothie") ?? items[0]);
+  const [draftOverride, setDraft] = useState<EditableItem | null>(null);
+  const draft = draftOverride ?? items[0] ?? blankItem("food", foodCategories[0]?.id, drinkSections[0]?.id);
   const [message, setMessage] = useState<{ text: string; tone: "ok" | "error" } | null>(null);
   // Storefront preview language: independent of the portal language
   const [previewLang, setPreviewLang] = useState<Locale>(lang);
@@ -64,8 +83,8 @@ export default function MenuManager({
   const groupName = (group: MenuGroup) => t.menu.groups[group];
   const categoryName = (item: EditableItem) =>
     item.group === "drinks"
-      ? localize(drinkSections.find((s) => s.id === item.section)?.name ?? drinkSections[0].name, lang)
-      : localize(categories.find((c) => c.id === item.categories[0])?.name ?? categories[0].name, lang);
+      ? localize(drinkSections.find((s) => s.id === item.section)?.name ?? { en: groupName("drinks"), fr: groupName("drinks") }, lang)
+      : localize(categories.find((c) => c.id === item.categories[0])?.name ?? { en: groupName("food"), fr: groupName("food") }, lang);
 
   const q = query.trim().toLowerCase();
   const shown = items
@@ -79,7 +98,7 @@ export default function MenuManager({
   ];
 
   const update = (patch: Partial<EditableItem>) => {
-    setDraft((current) => ({ ...current, ...patch }));
+    setDraft((current) => ({ ...(current ?? draft), ...patch }));
     setMessage(null);
   };
 
@@ -87,13 +106,14 @@ export default function MenuManager({
     const [group, id] = value.split(":") as [MenuGroup, string];
     update(
       group === "drinks"
-        ? { group, section: id as DrinkSectionId, categories: ["drinks"] }
-        : { group, section: undefined, categories: [id as CategoryId] },
+        ? { group, section: id, categories: ["drinks"] }
+        : { group, section: undefined, categories: [id] },
     );
   };
 
   const addItem = (group: MenuGroup) => {
-    const template = items.find((item) => item.group === group)!;
+    const template =
+      items.find((item) => item.group === group) ?? blankItem(group, foodCategories[0]?.id, drinkSections[0]?.id);
     setDraft({
       ...template,
       id: `draft-${Date.now().toString(36)}`,
@@ -110,7 +130,7 @@ export default function MenuManager({
     setMessage(null);
   };
 
-  const save = (state: "draft" | "published") => {
+  const save = async (state: "draft" | "published") => {
     if ((!draft.name.en.trim() && !draft.name.fr.trim()) || draft.price <= 0) {
       setMessage({ text: draft.price <= 0 ? t.editor.required : t.editor.requiredName, tone: "error" });
       return;
@@ -118,15 +138,13 @@ export default function MenuManager({
     // A language left empty shows the other one until it is translated
     const both = (text: { en: string; fr: string }) => ({ en: text.en.trim() || text.fr, fr: text.fr.trim() || text.en });
     const item: EditableItem = { ...draft, name: both(draft.name), description: both(draft.description), isDraftNew: false };
-    saveItem(item, state);
-    setDraft({ ...item, state });
-    recordAudit({
-      actorId: viewer.id,
-      scope: "content",
-      template: state === "published" ? "itemPublished" : "itemDraft",
-      values: { item: item.name, price: formatPrice(item.price), badge: item.isNew ? dict.staff.auditTemplates.newBadge : "" },
-    });
-    setMessage({ text: state === "published" ? t.editor.publishedToast : t.editor.saved, tone: "ok" });
+    try {
+      const saved = await saveItem(item, state);
+      setDraft({ ...saved, isDraftNew: false, state });
+      setMessage({ text: state === "published" ? t.editor.publishedToast : t.editor.saved, tone: "ok" });
+    } catch {
+      setMessage({ text: t.editor.saveError, tone: "error" });
+    }
   };
 
   const name = localize(draft.name, lang) || draft.name.en || draft.name.fr || t.menu.newItem;
@@ -134,6 +152,9 @@ export default function MenuManager({
 
   return (
     <section aria-labelledby="menu-title" className="space-y-5">
+      {(categoriesError || sectionsError || tagsError) && (
+        <p role="alert" className="text-sm text-critical">{t.editor.loadError}</p>
+      )}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h2 id="menu-title" className="text-xl">
@@ -199,7 +220,7 @@ export default function MenuManager({
                     )}
                   >
                     <span className="flex items-center gap-3">
-                      <Image src={item.image} alt="" width={96} height={96} sizes="48px" className="h-12 w-12 shrink-0 rounded-md object-cover" />
+                      {item.image && <Image src={item.image} alt="" width={96} height={96} sizes="48px" className="h-12 w-12 shrink-0 rounded-md object-cover" />}
                       <span className="min-w-0">
                         <span className="block truncate text-[0.8125rem] font-semibold">{localize(item.name, lang) || t.menu.newItem}</span>
                         <span className="mt-0.5 block text-[0.6875rem] text-muted-foreground">
@@ -240,8 +261,14 @@ export default function MenuManager({
               image={draft.image}
               alt={name}
               title={t.editor.photo}
-              labels={{ drop: t.editor.drop, upload: t.editor.upload }}
-              onImage={(image) => update({ image })}
+              labels={{
+                drop: t.editor.drop,
+                upload: t.editor.upload,
+                uploading: t.editor.uploading,
+                uploadError: t.editor.uploadError,
+                invalid: t.editor.invalidImage,
+              }}
+              onImage={(image, imageId) => update({ image, imageId })}
             />
             {/* key: the "same text" choice is read again for each item */}
             <BilingualField key={`${draft.id}-name`} label={t.editor.name} value={draft.name} onChange={(value) => update({ name: value })} labels={bilingual} required />
@@ -291,7 +318,7 @@ export default function MenuManager({
             </div>
 
             <p className="text-[0.6875rem] text-muted-foreground">
-              {fill(t.editor.owner, { name: superadmin.name, role: p.roles.superadmin })}
+              {fill(t.editor.owner, { name: viewer.name, role: p.roles.superadmin })}
             </p>
             <div className="flex flex-wrap gap-2">
               <ActionButton onClick={() => save("draft")}>{t.editor.saveDraft}</ActionButton>
@@ -315,6 +342,7 @@ export default function MenuManager({
           </div>
           <article className="max-w-sm overflow-hidden rounded-2xl border border-border bg-card">
             <div className="relative aspect-[6/5]">
+              {draft.image && (
               <Image
                 src={draft.image}
                 alt={previewName}
@@ -323,6 +351,7 @@ export default function MenuManager({
                 unoptimized={draft.image.startsWith("blob:")}
                 className={cn("object-cover", !draft.available && "grayscale")}
               />
+              )}
               {draft.isNew && <NewBadge label={t.preview.new} className="absolute left-3 top-3" />}
             </div>
             <div className="space-y-2 p-5">
@@ -330,7 +359,7 @@ export default function MenuManager({
               <p className="line-clamp-2 text-xs text-muted-foreground">{localize(draft.description, previewLang)}</p>
               <div className="flex flex-wrap gap-1">
                 {draft.tags.map((tag) => (
-                  <Tag key={tag}>{tagLabel(tag, previewLang)}</Tag>
+                  <Tag key={tag}>{tagLabel(tag, previewLang, tags)}</Tag>
                 ))}
               </div>
               <div className="flex items-center justify-between pt-2">

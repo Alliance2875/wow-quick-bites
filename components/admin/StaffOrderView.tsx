@@ -10,13 +10,14 @@ import { DotText } from "@/components/portal/ui/Status";
 import { Table, Td, Th, THead, Tr } from "@/components/portal/ui/Table";
 import { useToast } from "@/components/portal/ui/Toast";
 import Icon from "@/components/shared/ui/Icon";
-import { getStaff } from "@/data/staff";
 import { localize, type Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import { cn, fill, formatPrice, plural } from "@/lib/format";
 import { formatAmount, formatDateTime, formatTime } from "@/lib/portal/format";
 import { customerName, customerPhone, isActiveOrder, itemCount, orderLines, orderTotal, stageFlow } from "@/lib/portal/orders";
-import { moveOrder, useOrders } from "@/lib/portal/store";
+import { moveOrder } from "@/lib/portal/store";
+import { useGetOrderQuery } from "@/lib/redux/api/ordersApi";
+import { useGetTagsQuery } from "@/lib/redux/api/menuApi";
 import { localePath, routes } from "@/lib/routes";
 import RegisterAction, { canAct, type StaffViewer } from "./RegisterAction";
 
@@ -33,14 +34,17 @@ export default function StaffOrderView({
   dict: Pick<Dictionary, "portal" | "staff">;
   fromQueue?: boolean;
 }) {
+  const { data: tags = {} } = useGetTagsQuery();
   const t = dict.staff.order;
   const p = dict.portal;
   const { show, toast } = useToast();
-  const order = useOrders().find((o) => o.id === orderId)!;
+  const { data: order, isLoading, isError } = useGetOrderQuery(orderId);
+  if (isLoading) return <div className="min-h-96" aria-busy="true" />;
+  if (isError || !order) return <p role="alert" className="py-20 text-center">{t.unavailable}</p>;
   const client = customerName(order) || order.clientCode;
   const phone = customerPhone(order);
   // Guests have no permanent code: "Guest · no account" takes its place in the texts
-  const manager = getStaff(order.managerId)?.name ?? "—";
+  const manager = order.managerName ?? "—";
   const total = orderTotal(order);
 
   const at = (stage: keyof typeof order.history) => (order.history[stage] ? formatTime(order.history[stage]) : "—");
@@ -102,7 +106,7 @@ export default function StaffOrderView({
                         <ItemThumb item={line.item} lang={lang} />
                         <div>
                           <p>{localize(line.item.name, lang)}</p>
-                          <p className="mt-1 text-[0.6875rem] text-muted-foreground">{itemMeta(line.item, lang, " • ")}</p>
+                          <p className="mt-1 text-[0.6875rem] text-muted-foreground">{itemMeta(line.item, lang, " • ", tags)}</p>
                         </div>
                       </div>
                     </Td>
@@ -143,9 +147,13 @@ export default function StaffOrderView({
               {mine && (order.stage === "new" || order.stage === "accepted") && (
                 <ActionButton
                   variant="danger"
-                  onClick={() => {
-                    moveOrder(order, "cancelled");
-                    show(fill(dict.staff.queue.moved, { id: order.id, stage: p.stages.cancelled }));
+                  onClick={async () => {
+                    try {
+                      await moveOrder(order, "cancelled");
+                      show(fill(dict.staff.queue.moved, { id: order.id, stage: p.stages.cancelled }));
+                    } catch {
+                      show(dict.staff.actions.error);
+                    }
                   }}
                 >
                   {dict.staff.actions.cancel}

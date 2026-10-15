@@ -1,6 +1,7 @@
 "use client";
 
 import { ActionButton, ActionLink } from "@/components/portal/ui/Action";
+import { useState } from "react";
 import type { PortalOrder } from "@/data/types";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
@@ -35,6 +36,7 @@ export default function RegisterAction({
   size?: "sm" | "md";
 }) {
   const t = dict.staff.actions;
+  const [error, setError] = useState(false);
   const next = nextStage[order.stage];
   const detail = localePath(lang, routes.adminOrder(order.id));
 
@@ -48,16 +50,24 @@ export default function RegisterAction({
   }
 
   return (
+    <>
     <ActionButton
       variant={order.stage === "ready" ? "secondary" : "primary"}
       block={block}
       size={size}
-      onClick={() => {
-        moveOrder(order, next);
-        onDone?.(fill(dict.staff.queue.moved, { id: order.id, stage: dict.portal.stages[next] }));
+      onClick={async () => {
+        setError(false);
+        try {
+          await moveOrder(order, next);
+          onDone?.(fill(dict.staff.queue.moved, { id: order.id, stage: dict.portal.stages[next] }));
+        } catch {
+          setError(true);
+        }
       }}
     >
       {t[order.stage as "new" | "accepted" | "preparing" | "ready"]}
     </ActionButton>
+    {error && <p role="alert" className="mt-2 text-xs text-critical">{t.error}</p>}
+    </>
   );
 }

@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import StaffOrderView from "@/components/admin/StaffOrderView";
-import { orders } from "@/data/orders";
 import { resolveLang } from "@/i18n/get-dictionary";
 import { requireViewer } from "@/lib/auth/dal";
 import { fill } from "@/lib/format";
@@ -21,8 +19,6 @@ export default async function StaffOrderPage({ params, searchParams }: PageProps
     roles: ["manager", "superadmin"],
     anyPermission: ["orders:process"],
   });
-  if (!orders.some((o) => o.id === id)) notFound();
-
   return (
     <StaffOrderView
       lang={lang}

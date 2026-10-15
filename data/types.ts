@@ -1,16 +1,14 @@
 import type { IconName } from "@/components/shared/ui/Icon";
 import type { Localized } from "@/i18n/config";
-import type { TagKey } from "./tags";
 
-// Shapes of the mock content in data/. They mirror what the backend API should return,
-// so swapping a data file for a fetch() later does not touch the components.
+// Shared UI and API data shapes.
 
-export type CategoryId = "burgers" | "pizza" | "desserts" | "drinks" | "chips" | "chicken";
+export type CategoryId = string;
 
 export type Category = {
   id: CategoryId;
   name: Localized;
-  icon: IconName;
+  icon?: IconName;
 };
 
 export type MenuGroup = "food" | "drinks";
@@ -25,19 +23,21 @@ export type MenuItem = {
   /** RWF */
   price: number;
   image: string;
+  imageId?: string;
+  available?: boolean;
   group: MenuGroup;
-  /** Drinks page section (see drinkSections in data/menu.ts) */
+  /** Drinks page section from the menu API */
   section?: DrinkSectionId;
   categories: CategoryId[];
-  tags: TagKey[];
+  tags: string[];
   isNew?: boolean;
-  /** Customisation groups shown in the product modal / page (see data/product-options.ts) */
+  /** Customisation groups shown in the product modal / page */
   optionGroups?: string[];
   /** Suggested drink shown under the product page ("Add something refreshing") */
   pairsWith?: string;
 };
 
-export type DrinkSectionId = "smoothies" | "milkshakes" | "ice-cream" | "mojitos" | "spiced-tea";
+export type DrinkSectionId = string;
 
 export type DrinkSection = {
   id: DrinkSectionId;
@@ -124,15 +124,31 @@ export type PortalOrder = {
   /** Name and phone given at checkout (guests always; account orders placed on the site) */
   contact?: { name: string; phone: string };
   /** Staff id of the manager in charge */
-  managerId: string;
+  managerId: string | null;
+  managerName?: string | null;
+  clientName?: string;
+  contactEmail?: string | null;
   /** ISO date, Kigali time */
   placedAt: string;
   fulfilment: "pickup" | "delivery";
   payment: "pay-on-pickup" | "mtn-momo" | "airtel-money";
   paymentStatus: "pending" | "paid" | "not-charged";
   stage: OrderStage;
-  /** Prices come from the menu (data/menu.ts): order totals are computed, never stored twice */
-  lines: { itemId: string; quantity: number }[];
+  /** API order-line snapshots keep historical prices unchanged. */
+  lines: {
+    itemId: string;
+    quantity: number;
+    choices?: string[];
+    note?: string | null;
+    name?: Localized;
+    unitPrice?: number;
+    total?: number;
+    options?: { id: string; name: Localized; price: number }[];
+  }[];
+  subtotal?: number;
+  fees?: number;
+  total?: number;
+  notes?: string | null;
   /** When each stage was reached (ISO dates) */
   history: Partial<Record<OrderStage, string>>;
 };
@@ -155,17 +171,24 @@ export type AuditEvent = {
   actorId: string;
   /** orders = register activity, content = menu/ads, access = people and permissions */
   scope: "orders" | "content" | "access";
-  /** Person affected by an access change ("Rwasibo Alexis Junior → Eric") */
+  /** Person affected by an access change */
   targetId?: string;
   text: Localized;
 };
 
 export type Campaign = {
-  /** Same id as the promotion it advertises (data/promotions.ts) */
-  promotionId: string;
-  status: "published" | "draft" | "scheduled";
+  id?: string;
+  /** UI editing key; API campaigns identify records with `id`. */
+  promotionId?: string;
+  status: "published" | "draft" | "scheduled" | "paused";
   tag: "promotion" | "new" | "offer";
   placement: "home-offers" | "home-hero";
+  title?: Localized;
+  text?: Localized | null;
+  cta?: Localized | null;
+  image?: string;
+  imageId?: string;
+  paused?: boolean;
   /** Menu category the call-to-action opens, or null for the whole menu */
   ctaCategory: CategoryId | null;
   startsAt?: string;

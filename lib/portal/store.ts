@@ -1,91 +1,69 @@
 "use client";
 
-import { useMemo } from "react";
-import { notifications as sampleNotifications } from "@/data/notifications";
-import { orders as sampleOrders } from "@/data/orders";
 import type { ClientNotification, OrderStage, PortalOrder } from "@/data/types";
-import { createStore } from "@/lib/create-store";
-import { portalNow } from "./clock";
+import { ACCESS_TOKEN_COOKIE } from "@/lib/api/config";
+import { ordersApi } from "@/lib/redux/api/ordersApi";
+import { store as reduxStore } from "@/lib/redux/store";
+import {
+  useGetMyNotificationsQuery,
+  useGetMyOrdersQuery,
+  useGetStaffOrdersQuery,
+} from "@/lib/redux/api/ordersApi";
 
-// MOCK portal state until the backend exists: the sample data in data/ plus the changes made in
-// this browser (stage changes and notification read flags), kept in localStorage.
-// Replace each action with its API call (PATCH /orders/:id); views stay the same.
+export type PortalNotification = ClientNotification & { managerId?: string };
 
-type OrderChange = { stage: OrderStage; history: PortalOrder["history"]; paymentStatus: PortalOrder["paymentStatus"] };
-
-/** Generated when a manager moves an order forward (the sample ones come with their own text). */
-export type PortalNotification = Omit<ClientNotification, "title" | "text"> &
-  Partial<Pick<ClientNotification, "title" | "text">> & { managerId?: string };
-
-type State = {
-  /** Orders placed on the storefront in this browser (accounts and guests) */
-  placed?: PortalOrder[];
-  orders: Record<string, OrderChange>;
-  events: PortalNotification[];
-  readNotifications: string[];
+const getClientToken = (): string | null => {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(new RegExp(`(^|;\\s*)(${ACCESS_TOKEN_COOKIE})=([^;]*)`));
+  return match ? decodeURIComponent(match[3]) : localStorage.getItem("wqb_token");
 };
 
-const empty: State = { orders: {}, events: [], readNotifications: [] };
-
-const store = createStore<State>("wqb-portal", empty);
-
-/** Time of a change made in the demo: just after the sample clock, one minute per change. */
-const demoTime = (state: State) =>
-  new Date(portalNow() + (Object.keys(state.orders).length + (state.placed?.length ?? 0) + 1) * 60_000).toISOString();
-
-// ───────── Orders ─────────
+const getClientRole = (): string | null => {
+  if (typeof window === "undefined") return null;
+  try {
+    const user = localStorage.getItem("wqb_user");
+    return user ? JSON.parse(user).role ?? null : null;
+  } catch {
+    return null;
+  }
+};
 
 export function useOrders(): PortalOrder[] {
-  const { orders, placed } = store.useValue();
-  return useMemo(
-    () => [...(placed ?? []), ...sampleOrders].map((order) => ({ ...order, ...orders[order.id] })),
-    [orders, placed],
-  );
-}
+  const token = typeof window !== "undefined" ? getClientToken() : null;
+  const role = typeof window !== "undefined" ? getClientRole() : null;
+  const isStaff = role === "manager" || role === "superadmin";
+  const isClient = role === "client";
 
-/** Checkout → register queue (POST /orders with the backend). Placed on the portal clock. */
-export function addPlacedOrder(order: Omit<PortalOrder, "placedAt" | "history" | "stage">) {
-  store.set((state) => {
-    const at = demoTime(state);
-    return { ...state, placed: [{ ...order, placedAt: at, stage: "new", history: { new: at } }, ...(state.placed ?? [])] };
+  const { data: staffOrders } = useGetStaffOrdersQuery(undefined, {
+    skip: !token || !isStaff,
+    pollingInterval: 10_000,
   });
-}
-
-export function moveOrder(order: PortalOrder, stage: OrderStage) {
-  store.set((state) => {
-    const at = demoTime(state);
-    const paymentStatus = stage === "completed" ? "paid" : stage === "cancelled" ? "not-charged" : order.paymentStatus;
-    const notification: PortalNotification = {
-      id: `live-${order.id}-${stage}`,
-      clientCode: order.clientCode,
-      orderId: order.id,
-      stage,
-      at,
-      read: false,
-      managerId: order.managerId,
-    };
-    return {
-      ...state,
-      orders: { ...state.orders, [order.id]: { stage, paymentStatus, history: { ...order.history, [stage]: at } } },
-      events: [notification, ...state.events.filter((event) => event.id !== notification.id)],
-    };
+  const { data: myOrders } = useGetMyOrdersQuery(undefined, {
+    skip: !token || !isClient,
+    pollingInterval: 10_000,
   });
+
+  return (isStaff ? staffOrders : isClient ? myOrders : []) ?? [];
 }
 
-// ───────── Client notifications ─────────
+export async function moveOrder(order: PortalOrder, stage: OrderStage) {
+  await reduxStore
+    .dispatch(ordersApi.endpoints.transitionOrder.initiate({ orderId: order.id, to: stage }))
+    .unwrap();
+}
 
 export function useNotifications(clientCode: string | undefined): PortalNotification[] {
-  const { events, readNotifications } = store.useValue();
-  return useMemo(
-    () =>
-      [...events, ...sampleNotifications]
-        .filter((notification) => notification.clientCode === clientCode)
-        .map((notification) => ({ ...notification, read: notification.read || readNotifications.includes(notification.id) }))
-        .sort((a, b) => Date.parse(b.at) - Date.parse(a.at)),
-    [events, readNotifications, clientCode],
-  );
+  const token = typeof window !== "undefined" ? getClientToken() : null;
+  const { data: notifications = [] } = useGetMyNotificationsQuery(undefined, {
+    skip: !token || !clientCode,
+    pollingInterval: 10_000,
+  });
+  return notifications.filter((notification) => notification.clientCode === clientCode);
 }
 
-export function markNotificationsRead(ids: string[]) {
-  store.set((state) => ({ ...state, readNotifications: [...new Set([...state.readNotifications, ...ids])] }));
+export async function markNotificationsRead(ids: string[]) {
+  if (ids.length === 0) return;
+  await reduxStore
+    .dispatch(ordersApi.endpoints.markNotificationsRead.initiate({ ids }))
+    .unwrap();
 }

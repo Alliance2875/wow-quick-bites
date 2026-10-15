@@ -10,7 +10,7 @@ export const SESSION_TTL_SECONDS = 60 * 60 * 8; // one working day
 
 /** Minimum data needed on every request: who, and with which role. No email, phone or password. */
 export type SessionPayload = {
-  /** Staff id (data/staff.ts) or client code (WQB001A) */
+  /** Staff id or client code (WQB001A), issued by the backend */
   sub: string;
   role: Role;
   name: string;

@@ -26,6 +26,7 @@ export const common: CommonDict = {
     orderNow: "Commander",
     categories: "Catégories",
     owner: "Propriétaire",
+    dataError: "Certaines informations de l’établissement n’ont pas pu être chargées.",
     rights: "Tous droits réservés.",
   },
   dish: {

@@ -15,8 +15,8 @@ cp .env.example .env.local   # production only: set SESSION_SECRET (dev has a bu
 
 | Area | URL | Who |
 |---|---|---|
-| Client area | `/en/account` (dashboard, orders, tracking, notifications, chat) | clients |
-| Staff portal | `/en/admin/orders`, `/admin/orders/[id]`, `/admin/messages` | managers + superadmin |
+| Client area | `/en/account` (dashboard, orders, tracking, notifications) | clients |
+| Staff portal | `/en/admin/orders`, `/en/admin/orders/[id]` | managers + superadmin |
 | | `/en/admin/content` (Menu & Ads) | superadmin, or a manager with an active content grant |
 | | `/en/admin` (overview), `/en/admin/managers` | superadmin only |
 
@@ -30,19 +30,10 @@ Everyone signs in at `/en/sign-in` and lands in their own workspace.
    permissions. Suspended managers and expired content grants are refused here even with a valid cookie.
 4. `lib/auth/roles.ts` — roles, permissions and the routes each role may open (one place to change the rules).
 
-Managers handle orders and chat by default; Menu & Ads permissions only come from an explicit, time-limited
-grant by the superadmin (`data/staff.ts` → `contentGrant`).
+Managers handle orders by default; Menu & Ads permissions only come from an explicit, time-limited
+grant by the superadmin, verified against the backend session.
 
-Demo accounts (mock directory in `lib/auth/directory.ts`, replaced by the auth API later):
-
-| Account | Password | Lands on |
-|---|---|---|
-| `owner@wowquickbites.rw` (superadmin) | `WowStaff#2026` | `/admin` |
-| `eric@wowquickbites.rw` (manager with content grant) · `nadia@` · `kevin@` | `WowStaff#2026` | `/admin/orders` |
-| `chantal@wowquickbites.rw` (suspended) | `WowStaff#2026` | refused |
-| `aline@example.com` (client WQB001A) … `jean@example.com` | `WowClient#2026` | `/account` |
-
-Any other email signs in as a new client (6+ character password), never as staff.
+Accounts and roles are managed by the backend. Use provisioned staging accounts to test role-specific access.
 
 ## Project structure
 

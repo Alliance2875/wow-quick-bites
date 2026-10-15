@@ -8,25 +8,24 @@ import Note from "@/components/portal/ui/Note";
 import { Eyebrow, Panel } from "@/components/portal/ui/Panel";
 import { Badge } from "@/components/portal/ui/Status";
 import { Table, Td, Th, THead, Tr } from "@/components/portal/ui/Table";
-import { getStaff } from "@/data/staff";
 import type { GrantScope } from "@/lib/auth/roles";
 import { localize, type Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import { fill } from "@/lib/format";
 import { saveBusinessSettings, useBusinessSettings, type BusinessSettings } from "@/lib/portal/content-store";
 import { formatDate, formatDayMonth, formatTime } from "@/lib/portal/format";
-import { recordAudit, updateManager, useAudit, useManagers } from "@/lib/portal/staff-store";
+import { updateManager, useAudit, useManagers } from "@/lib/portal/staff-store";
 import { localePath, routes } from "@/lib/routes";
 import { auditText } from "../audit";
 
 type Dict = Pick<Dictionary, "portal" | "staff">;
 
-export function BusinessPanel({ lang, viewerId, dict }: { lang: Locale; viewerId: string; dict: Dict }) {
+export function BusinessPanel({ lang, dict }: { lang: Locale; dict: Dict }) {
   const t = dict.staff.content.business;
-  const settings = useBusinessSettings();
+  const { settings, isLoading, isError } = useBusinessSettings();
   const [editing, setEditing] = useState<BusinessSettings | null>(null);
   const [saved, setSaved] = useState(false);
-  const owner = getStaff("rwasibo")?.name ?? "";
+  const [saveError, setSaveError] = useState(false);
 
   const editor = dict.staff.content.editor;
   // Business texts in both languages at once, whatever the portal language
@@ -42,12 +41,16 @@ export function BusinessPanel({ lang, viewerId, dict }: { lang: Locale; viewerId
       {editing ? (
         <form
           className="space-y-4"
-          onSubmit={(event) => {
+          onSubmit={async (event) => {
             event.preventDefault();
-            saveBusinessSettings(editing);
-            recordAudit({ actorId: viewerId, scope: "content", template: "businessSaved", values: {} });
-            setEditing(null);
-            setSaved(true);
+            setSaveError(false);
+            try {
+              await saveBusinessSettings(editing);
+              setEditing(null);
+              setSaved(true);
+            } catch {
+              setSaveError(true);
+            }
           }}
         >
           <p className="text-[0.8125rem] font-semibold">{t.editTitle}</p>
@@ -64,14 +67,19 @@ export function BusinessPanel({ lang, viewerId, dict }: { lang: Locale; viewerId
             </ActionButton>
             <ActionButton onClick={() => setEditing(null)}>{dict.portal.common.cancel}</ActionButton>
           </div>
+          {saveError && <p role="alert" className="text-xs text-critical">{t.saveError}</p>}
         </form>
+      ) : !settings ? (
+        <p role={isError ? "alert" : "status"} aria-busy={isLoading} className="text-sm text-muted-foreground">
+          {isError ? t.loadError : t.loading}
+        </p>
       ) : (
         <>
           <div className="grid gap-6 sm:grid-cols-2">
             <div className="space-y-2.5 text-[0.8125rem]">
               <Eyebrow>{t.business}</Eyebrow>
               <p className="font-semibold">{localize(settings.name, lang)}</p>
-              <p>{fill(t.owner, { name: owner })}</p>
+              <p>{fill(t.owner, { name: settings.owner })}</p>
               <p>{localize(settings.location, lang)}</p>
               <p>{localize(settings.hours, lang)}</p>
             </div>
@@ -106,10 +114,11 @@ export function BusinessPanel({ lang, viewerId, dict }: { lang: Locale; viewerId
   );
 }
 
-export function PublishingPanel({ lang, viewerId, dict }: { lang: Locale; viewerId: string; dict: Dict }) {
+export function PublishingPanel({ lang, dict }: { lang: Locale; dict: Dict }) {
   const t = dict.staff.content.publishing;
   const scopes = dict.staff.content.grant.scopes;
   const delegates = useManagers().filter((m) => m.contentGrant && m.status === "active");
+  const [error, setError] = useState(false);
 
   return (
     <Panel title={t.title} subtitle={t.subtitle}>
@@ -118,7 +127,7 @@ export function PublishingPanel({ lang, viewerId, dict }: { lang: Locale; viewer
         {delegates.map((manager) => {
           const grant = manager.contentGrant!;
           const values = {
-            grantor: getStaff(grant.grantedBy)?.name ?? "",
+            grantor: grant.grantedBy,
             scopes: grant.scopes.map((scope: GrantScope) => scopes[scope]).join(" · "),
             expiry: grant.expiresAt ? `${formatDate(grant.expiresAt)}, ${formatTime(grant.expiresAt)}` : "",
           };
@@ -138,17 +147,19 @@ export function PublishingPanel({ lang, viewerId, dict }: { lang: Locale; viewer
                 </ActionLink>
                 <ActionButton
                   variant="danger"
-                  onClick={() =>
-                    updateManager(
-                      manager.id,
-                      { contentGrant: null },
-                      { actorId: viewerId, scope: "access", targetId: manager.id, template: "revoke", values: {} },
-                    )
-                  }
+                  onClick={async () => {
+                    setError(false);
+                    try {
+                      await updateManager(manager.id, { contentGrant: null });
+                    } catch {
+                      setError(true);
+                    }
+                  }}
                 >
                   {t.revoke}
                 </ActionButton>
               </div>
+              {error && <p role="alert" className="mt-4 text-xs text-critical">{t.error}</p>}
             </div>
           );
         })}
@@ -176,11 +187,10 @@ export function AuditPanel({ lang, dict }: { lang: Locale; dict: Dict }) {
                 {formatDayMonth(event.at)} · {formatTime(event.at)}
               </Td>
               <Td>
-                {/* Live events name the person affected; sample events already do in their text */}
-                {"template" in event && event.targetId && `${getStaff(event.targetId)?.name ?? ""} · `}
-                {auditText(event, lang, dict.staff.auditTemplates)}
+                {event.targetId && `${event.targetId} · `}
+                {auditText(event, lang)}
               </Td>
-              <Td>{getStaff(event.actorId)?.name ?? event.actorId}</Td>
+              <Td>{event.actorId}</Td>
             </Tr>
           ))}
         </tbody>

@@ -10,7 +10,7 @@ export const isRole = (value: unknown): value is Role => roles.includes(value as
 
 /**
  * What a signed-in person may do. Managers get orders by default; content rights only come
- * from an explicit, time-limited grant by the superadmin (see data/staff.ts → contentGrant).
+ * from an explicit, time-limited grant by the superadmin (provided by the backend).
  */
 export type Permission =
   | "overview:view"

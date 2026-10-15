@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { lineDetails } from "@/components/shared/order/line-details";
+import { useLineDetails } from "@/components/shared/order/line-details";
 import Icon from "@/components/shared/ui/Icon";
 import QuantityStepper from "@/components/shared/ui/QuantityStepper";
 import type { Locale } from "@/i18n/config";
@@ -22,7 +22,7 @@ export default function CartLineItem({
   dict: Dictionary["cart"];
   stepperLabels: { decrease: string; increase: string };
 }) {
-  const { name, image, meta, note, unit } = lineDetails(line, lang);
+  const { name, image, meta, note, unit } = useLineDetails(line, lang);
 
   return (
     <li className="flex flex-wrap items-center gap-4 py-5 sm:flex-nowrap">

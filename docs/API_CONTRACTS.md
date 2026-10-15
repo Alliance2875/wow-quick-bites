@@ -1,12 +1,14 @@
 # WOW Quick Bites — API contracts (frontend ↔ backend)
 
-Status: **draft v1** · Owner: frontend team · Audience: backend team
+Status: **integrated against the OpenAPI contract** · Owner: frontend team · Audience: frontend and backend teams
 
-This document lists every endpoint the frontend needs to replace its mocks. Each section names the mock it
-replaces, so the switch is one file per domain. Shapes are copied from the TypeScript types the UI already
-uses (`data/types.ts`, `lib/…`): if the API returns exactly these, no component changes.
+`WOW Quick Bites API.yaml` is the source of truth for endpoint paths and payloads. This document retains
+contract details and historical examples; the runtime UI now reads business data from the backend instead of
+the former fixture arrays. The local audit covers all 66 method/path operations across 53 paths with a client
+wrapper or a server-side call.
+The production frontend build passes, but the deployed backend has not yet been smoke-tested from the UI.
 
-Open questions are marked **❓** — please answer them in the PR / issue that implements the endpoint.
+Questions marked **❓** are historical contract questions and should be reconfirmed before treating them as blockers.
 
 ---
 
@@ -50,7 +52,7 @@ Replaces: `lib/auth/directory.ts` (`authenticate`, `register`). The frontend kee
 - **Option B** — the backend only validates credentials and returns the user; the frontend signs its own JWT
   (current behaviour, `SESSION_SECRET`).
 
-❓ Which option? Option A is needed if the mobile app or other clients will use the same API.
+
 
 ### `POST /auth/sign-in` — public
 ```json
@@ -126,7 +128,7 @@ No phone step after Google sign-in: a missing phone is asked at checkout and can
 
 Needed from the backend: `POST /auth/google` `{ "email", "name" }` (called server-side by the callback, trusted
 caller) → `200 { "user": SessionUser }` (existing account) or `201` (new client account, code assigned). Staff
-emails are refused (`403 staff_password_only`). ❓ Or should the backend run the OAuth exchange itself?
+emails are refused (`403 staff_password_only`). ❓ Or should the backend run the OAuth exchange itself? Right now we added google Oauth on our side.
 
 ### `PATCH /me` — client
 `{ "name"?, "phone"? }` → `200 { "user": SessionUser }`. Used by the profile page (`/account/profile`). The email
@@ -243,7 +245,7 @@ orders are grouped by phone number.
 `fees`, `total`. Errors: `409 item_unavailable` (with `itemIds`), `422 validation_failed`.
 
 ❓ Mobile Money (MTN MoMo / Airtel Money): payment initiation + webhook flow and the states to show while
-waiting (`paymentStatus: "pending"` until confirmed?).
+waiting (`paymentStatus: "pending"` until confirmed?). Manually verified by the admin then changes the status?
 
 ---
 
@@ -309,7 +311,7 @@ new | accepted → cancelled
 ## 7. Messaging
 
 Chat and internal messaging are not part of the current frontend scope. No client or staff messaging
-endpoints are required for the portal.
+endpoints are required for the portal. We removed them.
 
 ---
 
@@ -464,19 +466,21 @@ The UI translates `code` (EN/FR), so codes must be stable; `message` is not show
 - **Security**: CSRF protection on cookie-authenticated mutations (SameSite=Lax + origin check or token), password hashing (argon2/bcrypt/scrypt), rate limiting on auth.
 - **Time zone**: store UTC, return with `+02:00`; "today" in the register = Kigali calendar day.
 - **Performance**: catalogue endpoints cacheable; list endpoints < 300 ms p95; images served from a CDN with width variants (the site uses `next/image`, so absolute URLs on an allowed host ❓ give us the host).
-- **Environments**: ❓ staging URL + seed data matching `data/` (the sample accounts Aline, Eric, Nadia… make QA easy).
+- **Environments**: provide a staging URL and test accounts so auth and role-specific flows can be verified.
 
 ---
 
-## 13. Frontend switch checklist
+## 13. Frontend integration coverage
 
-| Mock to replace | Endpoints |
+| API area | Covered operations | Integration |
 |---|---|
-| `lib/auth/directory.ts` | §2 |
-| `data/menu.ts`, `categories.ts`, `product-options.ts`, `tags.ts`, `promotions.ts`, `contact.ts`, `site.ts` | §4 |
-| `lib/cart/cart.ts`, `lib/orders.ts` | §5 |
-| `data/orders.ts`, `lib/portal/store.ts` (orders) | §6 |
-| `data/notifications.ts`, `lib/portal/store.ts` (notifications) | §8 |
-| `lib/portal/content-store.ts`, `data/campaigns.ts`, `data/business.ts` | §9 |
-| `data/staff.ts`, `data/audit.ts`, `lib/portal/staff-store.ts` | §10 |
-| `lib/portal/clock.ts` (`portalNow`) | real time once orders are live |
+| Auth | Sign-in/up, verification, sign-out, current user, password change/recovery/reset, refresh, invitation acceptance, Google sign-in | RTK Query, server actions, DAL and OAuth callback |
+| Customer | Profile read/update, notifications/read, order list/detail | RTK Query and server actions |
+| Catalogue | Business, menu bundle/items/detail/categories/drink sections/options/tags, promotions | RTK Query; storefront and contact surfaces |
+| Orders | List/create/detail, assignment, payment update, transitions | RTK Query; checkout and staff queue |
+| Admin content | Overview, audit, business GET/PUT/PATCH, menu CRUD/draft/publish/restore/upload, campaign CRUD and lifecycle actions | RTK Query; admin screens |
+| Admin access | Invitations, managers list/detail/update, grants, suspend/reactivate/resend | RTK Query; manager workspace |
+
+The order-assignment operation is exposed in the superadmin queue. Non-interactive operations such as refresh
+and Google OAuth are deliberately performed in the shared base query or server callback rather than in a
+browser component. Build success verifies compilation, not the availability or behavior of the deployed API.

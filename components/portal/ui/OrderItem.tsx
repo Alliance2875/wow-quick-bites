@@ -1,13 +1,21 @@
+"use client";
+
 import Image from "next/image";
 import { tagLabel } from "@/data/tags";
 import type { MenuItem } from "@/data/types";
 import { localize, type Locale } from "@/i18n/config";
 import { cn, formatPrice } from "@/lib/format";
 import { formatAmount } from "@/lib/portal/format";
+import { useGetTagsQuery } from "@/lib/redux/api/menuApi";
 
 /** "Beef · Cheese · Toasted bun" (cart line) or the item's tags. */
-export const itemMeta = (item: MenuItem, lang: Locale, separator = " · ") =>
-  item.cartMeta ? localize(item.cartMeta, lang) : item.tags.map((tag) => tagLabel(tag, lang)).join(separator);
+export const itemMeta = (
+  item: MenuItem,
+  lang: Locale,
+  separator = " · ",
+  labels: Record<string, { en: string; fr: string }> = {},
+) =>
+  item.cartMeta ? localize(item.cartMeta, lang) : item.tags.map((tag) => tagLabel(tag, lang, labels)).join(separator);
 
 export function ItemThumb({ item, lang, size = "md" }: { item: MenuItem; lang: Locale; size?: "sm" | "md" }) {
   return (
@@ -34,12 +42,13 @@ export default function OrderItem({
   lang: Locale;
   size?: "sm" | "md";
 }) {
+  const { data: tags = {} } = useGetTagsQuery();
   return (
     <div className="flex items-center gap-3.5">
       <ItemThumb item={item} lang={lang} size={size} />
       <div className="min-w-0 flex-1">
         <p className="text-[0.8125rem] font-bold leading-snug">{localize(item.name, lang)}</p>
-        <p className="mt-0.5 text-[0.6875rem] leading-snug text-muted-foreground">{itemMeta(item, lang)}</p>
+        <p className="mt-0.5 text-[0.6875rem] leading-snug text-muted-foreground">{itemMeta(item, lang, " · ", tags)}</p>
         <p className="mt-1 text-xs">
           {quantity} × {formatPrice(item.price)}
         </p>

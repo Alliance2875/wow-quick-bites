@@ -8,32 +8,59 @@ import Breadcrumb from "@/components/shared/ui/Breadcrumb";
 import Container from "@/components/shared/ui/Container";
 import Icon from "@/components/shared/ui/Icon";
 import Tag from "@/components/shared/ui/Tag";
-import { categories } from "@/data/categories";
-import { getMenuItem, menuItems } from "@/data/menu";
-import { tagLabel } from "@/data/tags";
+import type { Category } from "@/data/types";
+import type { Localized } from "@/i18n/config";
+import type { MenuItem } from "@/data/types";
 import { localize } from "@/i18n/config";
 import { resolveLang } from "@/i18n/get-dictionary";
+import { API_BASE_URL } from "@/lib/api/config";
 import { formatPrice } from "@/lib/format";
 import { localePath, routes } from "@/lib/routes";
 
-export function generateStaticParams() {
-  return menuItems.map((item) => ({ slug: item.id }));
+async function fetchMenuItem(slug: string): Promise<MenuItem | undefined> {
+  const response = await fetch(`${API_BASE_URL}/menu/items/${slug}/`, {
+    next: { revalidate: 60 },
+  });
+  if (response.status === 404) return undefined;
+  if (!response.ok) throw new Error(`Menu API request failed: ${response.status}`);
+  return (await response.json()) as MenuItem;
+}
+
+async function fetchCatalogueData() {
+  const [categoriesResponse, tagsResponse] = await Promise.all([
+    fetch(`${API_BASE_URL}/menu/categories/`, { next: { revalidate: 60 } }),
+    fetch(`${API_BASE_URL}/menu/tags/`, { next: { revalidate: 60 } }),
+  ]);
+  if (!categoriesResponse.ok || !tagsResponse.ok) {
+    throw new Error(
+      `Catalogue API request failed: ${categoriesResponse.status}, ${tagsResponse.status}`,
+    );
+  }
+  return Promise.all([
+    categoriesResponse.json() as Promise<Category[]>,
+    tagsResponse.json() as Promise<Record<string, Localized>>,
+  ]);
 }
 
 export async function generateMetadata({ params }: PageProps<"/[lang]/menu/[slug]">): Promise<Metadata> {
   const { lang } = await resolveLang(params);
-  const item = getMenuItem((await params).slug);
+  const slug = (await params).slug;
+  const item = await fetchMenuItem(slug);
   return item ? { title: localize(item.name, lang), description: localize(item.description, lang) } : {};
 }
 
 export default async function ProductPage({ params }: PageProps<"/[lang]/menu/[slug]">) {
   const { lang, dict } = await resolveLang(params);
-  const item = getMenuItem((await params).slug);
+  const slug = (await params).slug;
+  const [item, [categories, tags]] = await Promise.all([
+    fetchMenuItem(slug),
+    fetchCatalogueData(),
+  ]);
   if (!item) notFound();
 
   const name = localize(item.name, lang);
   const category = categories.find((c) => c.id === item.categories[0]);
-  const pairsWith = item.pairsWith ? getMenuItem(item.pairsWith) : undefined;
+  const pairsWith = item.pairsWith ? await fetchMenuItem(item.pairsWith) : undefined;
   const href = (path: string) => localePath(lang, path);
 
   return (
@@ -69,7 +96,7 @@ export default async function ProductPage({ params }: PageProps<"/[lang]/menu/[s
           <p className="mt-4 text-lg text-muted-foreground">{localize(item.description, lang)}</p>
           <div className="mt-4 flex flex-wrap gap-2">
             {item.tags.map((tag) => (
-              <Tag key={tag}>{tagLabel(tag, lang)}</Tag>
+              <Tag key={tag}>              {localize(tags[tag] ?? { en: tag, fr: tag }, lang)}</Tag>
             ))}
           </div>
           <p className="mt-5 text-3xl font-bold text-accent">{formatPrice(item.price)}</p>

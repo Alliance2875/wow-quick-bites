@@ -71,6 +71,7 @@ export const account: AccountDict = {
     subtitle: "Récupérez votre mot de passe pour retrouver vos commandes et leur suivi.",
     heroTitle: "Cuisine fraîche. Saveurs uniques.",
     heroTagline: "WOW Quick Bites par Rwasibo",
+    errors: { server: "La demande n’a pas pu aboutir. Veuillez réessayer." },
     request: {
       kicker: "ÉTAPE 1 · DEMANDER UNE RÉINITIALISATION",
       title: "Mot de passe oublié ?",

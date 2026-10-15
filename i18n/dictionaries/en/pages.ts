@@ -13,6 +13,12 @@ export const about = {
 export const contact = {
   metaTitle: "Contact Us",
   title: "Contact Us",
+  phone: "Phone",
+  email: "Email",
+  location: "Location",
+  hours: "Hours",
+  loadError: "Business contact details could not be loaded.",
+  noDetails: "Contact details are not available yet.",
 };
 
 export type AboutDict = typeof about;

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { SearchInput } from "@/components/portal/ui/Controls";
 import Note from "@/components/portal/ui/Note";
 import PageHeader from "@/components/portal/ui/PageHeader";
@@ -10,13 +10,13 @@ import { StageText } from "@/components/portal/ui/Status";
 import { Table, TableFooter, Td, Th, THead, Tr } from "@/components/portal/ui/Table";
 import { useToast } from "@/components/portal/ui/Toast";
 import Icon from "@/components/shared/ui/Icon";
-import { getStaff } from "@/data/staff";
 import type { OrderStage, PortalOrder } from "@/data/types";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import { cn, fill, plural } from "@/lib/format";
 import { daysAgo } from "@/lib/portal/clock";
 import { formatAmount, formatDate, formatTime } from "@/lib/portal/format";
+import { useGetBusinessQuery } from "@/lib/redux/api/businessApi";
 import {
   countByStage,
   customerKey,
@@ -30,6 +30,8 @@ import {
   orderTotal,
 } from "@/lib/portal/orders";
 import { useOrders } from "@/lib/portal/store";
+import { useAssignOrderMutation } from "@/lib/redux/api/ordersApi";
+import { useGetAdminManagersQuery } from "@/lib/redux/api/adminApi";
 import { localePath, routes } from "@/lib/routes";
 import RegisterAction, { canAct, type StaffViewer } from "./RegisterAction";
 
@@ -63,17 +65,28 @@ export default function OrderQueue({
   const t = dict.staff.queue;
   const p = dict.portal;
   const { show, toast } = useToast();
+  const [assignOrder] = useAssignOrderMutation();
   const [stage, setStage] = useState<OrderStage | "all">("all");
   const [mine, setMine] = useState(false);
   const [grouped, setGrouped] = useState(true);
   const [query, setQuery] = useState("");
   const [customers, setCustomers] = useState<CustomerFilter>("all");
   const [activeOrderId, setActiveOrderId] = useState(selectedOrderId);
+  const [assignmentError, setAssignmentError] = useState(false);
 
-  useEffect(() => setActiveOrderId(selectedOrderId), [selectedOrderId]);
-
-  const all = useOrders().filter(inQueueWindow);
+  const { data: business } = useGetBusinessQuery();
+  const orders = useOrders();
+  const queueWindowDays = business?.queueWindowDays;
+  const all = queueWindowDays === undefined
+    ? orders
+    : orders.filter((order) => inQueueWindow(order, queueWindowDays));
   const counts = countByStage(all);
+  const { data: managers = [], isError: managersError } = useGetAdminManagersQuery(undefined, {
+    skip: viewer.role !== "superadmin",
+  });
+  const assignableManagers = managers.filter(
+    (manager) => manager.status === "active" && manager.assignment !== "none",
+  );
   const q = query.trim().toLowerCase();
   const digits = q.replace(/\D/g, "");
   const filtered = all
@@ -90,6 +103,15 @@ export default function OrderQueue({
     );
   const shown = grouped ? groupByClient(filtered) : [...filtered].sort(newestFirst);
   const perClient = (key: string) => shown.filter((o) => customerKey(o) === key);
+  const assign = async (orderId: string, managerId: string) => {
+    setAssignmentError(false);
+    try {
+      await assignOrder({ orderId, managerId }).unwrap();
+      show(t.assignmentSaved);
+    } catch {
+      setAssignmentError(true);
+    }
+  };
 
   const placedLabel = (iso: string) => {
     const days = daysAgo(iso);
@@ -185,6 +207,11 @@ export default function OrderQueue({
         action={<span className="text-[0.6875rem] text-muted-foreground">{t.register}</span>}
         bodyClassName=""
       >
+        {(assignmentError || managersError) && (
+          <p role="alert" className="px-5 pt-4 text-xs text-critical">
+            {assignmentError ? t.assignmentError : t.assignmentManagersError}
+          </p>
+        )}
         <Table minWidth="min-w-[58rem]">
           <THead>
             <Th>{t.columns.client}</Th>
@@ -259,7 +286,29 @@ export default function OrderQueue({
                     <StageText stage={order.stage} label={p.stages[order.stage]} />
                   </Td>
                   <Td className="tabular-nums">{formatAmount(orderTotal(order))}</Td>
-                  <Td>{getStaff(order.managerId)?.name}</Td>
+                  <Td>
+                    {viewer.role === "superadmin" ? (
+                      <select
+                        aria-label={t.columns.assigned}
+                        value={order.managerId ?? ""}
+                        onChange={(event) => {
+                          if (event.target.value) void assign(order.id, event.target.value);
+                        }}
+                        className="max-w-40 rounded-md border border-border bg-panel px-2 py-1 text-xs"
+                        disabled={assignableManagers.length === 0}
+                      >
+                        <option value="">{order.managerName ?? t.unassigned}</option>
+                        {order.managerId && !assignableManagers.some((manager) => manager.id === order.managerId) && (
+                          <option value={order.managerId}>{order.managerName ?? order.managerId}</option>
+                        )}
+                        {assignableManagers.map((manager) => (
+                          <option key={manager.id} value={manager.id}>{manager.name}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      order.managerName ?? "—"
+                    )}
+                  </Td>
                   <Td>
                     <div className="flex items-center gap-2">
                       <RegisterAction

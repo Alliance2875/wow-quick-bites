@@ -60,6 +60,7 @@ export const checkout = {
   },
   required: "Please fill in your name and phone number.",
   invalidPhone: "Enter a valid Rwandan mobile number (07X XXX XXXX).",
+  orderFailed: "We couldn't place your order. Please try again.",
 };
 
 export type CheckoutDict = typeof checkout;
