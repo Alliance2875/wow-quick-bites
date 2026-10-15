@@ -40,8 +40,11 @@ export const adminApi = apiSlice.injectEndpoints({
     }),
 
     // Menu Management
-    getAdminMenuItems: builder.query<AdminMenuItem[], void>({
-      query: () => "/admin/menu/items/",
+    getAdminMenuItems: builder.query<AdminMenuItem[], { deleted?: boolean } | void>({
+      query: (params) => ({
+        url: "/admin/menu/items/",
+        params: params || undefined,
+      }),
       providesTags: ["AdminMenuItems"],
     }),
     getAdminMenuItem: builder.query<AdminMenuItem, string>({
@@ -88,7 +91,7 @@ export const adminApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ["AdminMenuItems", "Menu", "Items", "AdminAudit"],
     }),
-    deleteAdminMenuItem: builder.mutation<{ success: boolean }, string>({
+    deleteAdminMenuItem: builder.mutation<void, string>({
       query: (slug) => ({
         url: `/admin/menu/items/${slug}/`,
         method: "DELETE",

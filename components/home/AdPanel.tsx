@@ -73,6 +73,7 @@ function PromoBlock({ promo, lang }: { promo: Promotion; lang: Locale }) {
           alt=""
           width={72}
           height={64}
+          unoptimized={promo.image.startsWith("http")}
           className="h-16 w-[4.5rem] shrink-0 rounded object-cover"
         />
       </div>

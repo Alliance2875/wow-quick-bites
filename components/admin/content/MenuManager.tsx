@@ -15,7 +15,7 @@ import { localize, type Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import type { Permission } from "@/lib/auth/roles";
 import { cn, fill, formatPrice, plural } from "@/lib/format";
-import { saveItem, useMenuItems, type EditableItem } from "@/lib/portal/content-store";
+import { removeMenuItem, restoreMenuItem, saveItem, useMenuItems, type EditableItem } from "@/lib/portal/content-store";
 import { useGetCategoriesQuery, useGetDrinkSectionsQuery, useGetTagsQuery } from "@/lib/redux/api/menuApi";
 import ImageDrop from "./ImageDrop";
 
@@ -61,9 +61,10 @@ export default function MenuManager({
   const { data: drinkSections = [], isError: sectionsError } = useGetDrinkSectionsQuery();
   const { data: tags = {}, isError: tagsError } = useGetTagsQuery();
   const foodCategories = categories.filter((category) => category.id !== "drinks");
-  const items = useMenuItems();
   const [filter, setFilter] = useState<Filter>("all");
   const [availability, setAvailability] = useState<Availability>("all");
+  const [showRemoved, setShowRemoved] = useState(false);
+  const items = useMenuItems(showRemoved);
   const [query, setQuery] = useState("");
   const [draftOverride, setDraft] = useState<EditableItem | null>(null);
   const draft = draftOverride ?? items[0] ?? blankItem("food", foodCategories[0]?.id, drinkSections[0]?.id);
@@ -88,6 +89,7 @@ export default function MenuManager({
 
   const q = query.trim().toLowerCase();
   const shown = items
+    .filter((item) => Boolean(item.deleted) === showRemoved)
     .filter((item) => filter === "all" || item.group === filter)
     .filter((item) => availability === "all" || (availability === "available") === item.available)
     .filter((item) => !q || localize(item.name, lang).toLowerCase().includes(q));
@@ -121,6 +123,8 @@ export default function MenuManager({
       description: { en: "", fr: "" },
       cartMeta: undefined,
       price: 0,
+      image: "",
+      imageId: undefined,
       tags: [],
       isNew: true,
       available: true,
@@ -144,6 +148,30 @@ export default function MenuManager({
       setMessage({ text: state === "published" ? t.editor.publishedToast : t.editor.saved, tone: "ok" });
     } catch {
       setMessage({ text: t.editor.saveError, tone: "error" });
+    }
+  };
+
+  const removeSelected = async () => {
+    if (draft.isDraftNew || draft.deleted) return;
+    if (!window.confirm(fill(t.editor.removeConfirm, { name }))) return;
+    try {
+      await removeMenuItem(draft.id);
+      setDraft(null);
+      setMessage({ text: t.editor.removed, tone: "ok" });
+    } catch {
+      setMessage({ text: t.editor.removeError, tone: "error" });
+    }
+  };
+
+  const restoreSelected = async () => {
+    if (!draft.deleted) return;
+    try {
+      const restored = await restoreMenuItem(draft.id);
+      setShowRemoved(false);
+      setDraft(restored);
+      setMessage({ text: t.editor.restored, tone: "ok" });
+    } catch {
+      setMessage({ text: t.editor.restoreError, tone: "error" });
     }
   };
 
@@ -181,6 +209,16 @@ export default function MenuManager({
           ))}
         </div>
         <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+          <ActionButton
+            size="sm"
+            onClick={() => {
+              setDraft(null);
+              setMessage(null);
+              setShowRemoved((show) => !show);
+            }}
+          >
+            {showRemoved ? t.menu.showActive : t.menu.showRemoved}
+          </ActionButton>
           <SearchInput label={t.menu.search} value={query} onChange={(e) => setQuery(e.target.value)} className="w-full sm:w-60" />
           <label className="relative w-full sm:w-auto">
             <span className="sr-only">{t.menu.availability}</span>
@@ -220,7 +258,7 @@ export default function MenuManager({
                     )}
                   >
                     <span className="flex items-center gap-3">
-                      {item.image && <Image src={item.image} alt="" width={96} height={96} sizes="48px" className="h-12 w-12 shrink-0 rounded-md object-cover" />}
+                      {item.image && <Image src={item.image} alt="" width={96} height={96} sizes="48px" unoptimized className="h-12 w-12 shrink-0 rounded-md object-cover" />}
                       <span className="min-w-0">
                         <span className="block truncate text-[0.8125rem] font-semibold">{localize(item.name, lang) || t.menu.newItem}</span>
                         <span className="mt-0.5 block text-[0.6875rem] text-muted-foreground">
@@ -245,6 +283,11 @@ export default function MenuManager({
                 </li>
               );
             })}
+            {shown.length === 0 && (
+              <li className="px-5 py-6 text-sm text-muted-foreground">
+                {showRemoved ? t.menu.removedEmpty : t.menu.empty}
+              </li>
+            )}
           </ul>
           <p className="border-t border-border px-5 py-4 text-[0.6875rem] leading-relaxed text-muted-foreground">{t.menu.listNote}</p>
         </Panel>
@@ -266,6 +309,7 @@ export default function MenuManager({
                 upload: t.editor.upload,
                 uploading: t.editor.uploading,
                 uploadError: t.editor.uploadError,
+                uploadStatus: t.editor.uploadStatus,
                 invalid: t.editor.invalidImage,
               }}
               onImage={(image, imageId) => update({ image, imageId })}
@@ -325,6 +369,17 @@ export default function MenuManager({
               <ActionButton variant="primary" onClick={() => save("published")} disabled={!can("content:publish")}>
                 {t.editor.publish}
               </ActionButton>
+              {draft.deleted ? (
+                <ActionButton variant="primary" onClick={() => void restoreSelected()}>
+                  {t.editor.restore}
+                </ActionButton>
+              ) : (
+                !draft.isDraftNew && can("menu:edit") && (
+                  <ActionButton variant="danger" onClick={() => void removeSelected()}>
+                    {t.editor.remove}
+                  </ActionButton>
+                )
+              )}
             </div>
             {!can("content:publish") && <p className="text-[0.6875rem] text-muted-foreground">{t.editor.noPublish}</p>}
             {message && (
@@ -348,7 +403,7 @@ export default function MenuManager({
                 alt={previewName}
                 fill
                 sizes="(min-width: 1280px) 21rem, 24rem"
-                unoptimized={draft.image.startsWith("blob:")}
+                unoptimized
                 className={cn("object-cover", !draft.available && "grayscale")}
               />
               )}

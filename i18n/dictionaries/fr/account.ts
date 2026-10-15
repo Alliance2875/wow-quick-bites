@@ -4,6 +4,7 @@ export const account: AccountDict = {
   google: "Continuer avec Google",
   googleError: "La connexion avec Google n’a pas abouti. Réessayez ou utilisez votre e-mail.",
   googleConfigError: "La connexion Google n’est pas configurée sur ce site. Contactez l’administrateur.",
+  googleBackendConfigError: "Google a bien ouvert la connexion, mais la liaison avec le serveur n’est pas configurée. Contactez l’administrateur.",
   or: "ou",
   fields: {
     fullName: "Nom complet",

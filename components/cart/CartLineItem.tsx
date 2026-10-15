@@ -26,7 +26,7 @@ export default function CartLineItem({
 
   return (
     <li className="flex flex-wrap items-center gap-4 py-5 sm:flex-nowrap">
-      <Image src={image} alt="" width={140} height={134} className="h-28 w-28 shrink-0 rounded-xl object-cover sm:h-[8.375rem] sm:w-[8.75rem]" />
+      <Image src={image} alt="" width={140} height={134} unoptimized={image.startsWith("http")} className="h-28 w-28 shrink-0 rounded-xl object-cover sm:h-[8.375rem] sm:w-[8.75rem]" />
       <div className="min-w-0 flex-1">
         <Link href={localePath(lang, routes.product(line.itemId))} className="font-bold hover:underline">
           {name}

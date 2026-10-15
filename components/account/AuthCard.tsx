@@ -21,6 +21,7 @@ export default function AuthCard({
   lang,
   next,
   googleConfigError = false,
+  backendConfigError = false,
   children,
 }: {
   title: string;
@@ -30,6 +31,7 @@ export default function AuthCard({
   /** Page to return to after signing in (?next=) */
   next: string;
   googleConfigError?: boolean;
+  backendConfigError?: boolean;
   children: React.ReactNode;
 }) {
   // Full page navigation: the Route Handler redirects to Google's consent screen
@@ -48,6 +50,9 @@ export default function AuthCard({
       </a>
       {googleConfigError && (
         <p role="alert" className="mt-3 text-center text-sm text-critical">{dict.googleConfigError}</p>
+      )}
+      {backendConfigError && (
+        <p role="alert" className="mt-3 text-center text-sm text-critical">{dict.googleBackendConfigError}</p>
       )}
 
       <p className="my-5 text-center text-xs text-muted-foreground">{dict.or}</p>

@@ -10,7 +10,7 @@ export default function OrderLineRow({ line, lang }: { line: CartLine; lang: Loc
 
   return (
     <li className="flex items-center gap-3 py-3">
-      <Image src={image} alt="" width={72} height={68} className="h-[4.25rem] w-[4.5rem] shrink-0 rounded-xl object-cover" />
+      <Image src={image} alt="" width={72} height={68} unoptimized={image.startsWith("http")} className="h-[4.25rem] w-[4.5rem] shrink-0 rounded-xl object-cover" />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-bold">{name}</p>
         {meta && <p className="truncate text-xs text-muted-foreground">{meta}</p>}

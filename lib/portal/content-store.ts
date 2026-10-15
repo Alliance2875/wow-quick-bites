@@ -12,7 +12,12 @@ import {
 } from "@/lib/redux/api/adminApi";
 
 export type ContentState = "published" | "draft";
-export type EditableItem = MenuItem & { available: boolean; state: ContentState; isDraftNew?: boolean };
+export type EditableItem = MenuItem & {
+  available: boolean;
+  state: ContentState;
+  deleted?: boolean;
+  isDraftNew?: boolean;
+};
 
 export type EditableCampaign = Campaign & {
   promotionId: string;
@@ -20,6 +25,7 @@ export type EditableCampaign = Campaign & {
   text: Localized;
   cta: Localized;
   image: string;
+  isDraftNew?: boolean;
   paused?: boolean;
   deleted?: boolean;
 };
@@ -32,9 +38,21 @@ const toEditableItem = (item: AdminMenuItem): EditableItem => ({
   state: item.state,
 });
 
-export function useMenuItems(): EditableItem[] {
-  const { data } = useGetAdminMenuItemsQuery();
-  return useMemo(() => (data ?? []).filter((item) => !item.deleted).map(toEditableItem), [data]);
+export function useMenuItems(deletedOnly = false): EditableItem[] {
+  const { data } = useGetAdminMenuItemsQuery(deletedOnly ? { deleted: true } : undefined);
+  return useMemo(
+    () => (data ?? []).filter((item) => Boolean(item.deleted) === deletedOnly).map(toEditableItem),
+    [data, deletedOnly],
+  );
+}
+
+export async function removeMenuItem(id: string): Promise<void> {
+  await reduxStore.dispatch(adminApi.endpoints.deleteAdminMenuItem.initiate(id)).unwrap();
+}
+
+export async function restoreMenuItem(id: string): Promise<EditableItem> {
+  const item = await reduxStore.dispatch(adminApi.endpoints.restoreAdminMenuItem.initiate(id)).unwrap();
+  return toEditableItem(item);
 }
 
 export async function saveItem(item: EditableItem, state: ContentState): Promise<EditableItem> {
@@ -77,6 +95,7 @@ function toEditableCampaign(campaign: Campaign): EditableCampaign {
     text: campaign.text ?? { en: "", fr: "" },
     cta: campaign.cta ?? { en: "", fr: "" },
     image: campaign.image ?? "",
+    isDraftNew: false,
     paused: campaign.paused ?? campaign.status === "paused",
     status: campaign.status === "paused" ? "published" : campaign.status,
   };
@@ -106,23 +125,22 @@ function campaignPayload(campaign: EditableCampaign): Partial<Campaign> {
 
 export async function saveCampaign(campaign: EditableCampaign): Promise<EditableCampaign> {
   const api = adminApi.endpoints;
-  const campaigns = api.getAdminCampaigns.select()(reduxStore.getState()).data ?? [];
-  const alreadyExists = campaigns.some((entry) => (entry.id ?? entry.promotionId) === campaign.promotionId);
-  const saved = alreadyExists
-    ? await reduxStore
+  const saved = campaign.isDraftNew
+    ? await reduxStore.dispatch(api.createAdminCampaign.initiate(campaignPayload(campaign))).unwrap()
+    : await reduxStore
         .dispatch(
           api.updateAdminCampaign.initiate({
             slug: campaign.promotionId,
             data: campaignPayload(campaign),
           }),
         )
-        .unwrap()
-    : await reduxStore.dispatch(api.createAdminCampaign.initiate(campaignPayload(campaign))).unwrap();
-  const shouldPublish = campaign.status !== "draft" && campaign.status !== "paused";
-  const result = shouldPublish
-    ? await reduxStore.dispatch(api.publishAdminCampaign.initiate(saved.id ?? campaign.promotionId)).unwrap()
-    : saved;
-  return toEditableCampaign(result);
+        .unwrap();
+  return toEditableCampaign(saved);
+}
+
+export async function publishCampaign(id: string): Promise<EditableCampaign> {
+  const saved = await reduxStore.dispatch(adminApi.endpoints.publishAdminCampaign.initiate(id)).unwrap();
+  return toEditableCampaign(saved);
 }
 
 export async function patchCampaign(id: string, patch: Partial<EditableCampaign>) {

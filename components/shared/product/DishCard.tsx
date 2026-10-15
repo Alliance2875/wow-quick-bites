@@ -38,6 +38,7 @@ export default function DishCard({
           alt={name}
           fill
           sizes={imageSizes}
+          unoptimized={item.image.startsWith("http")}
           className="object-cover transition duration-500 group-hover:scale-105"
         />
         {item.isNew && <NewBadge label={labels.isNew} className="absolute left-3 top-3" />}

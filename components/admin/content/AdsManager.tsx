@@ -13,8 +13,7 @@ import { localize, type Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import type { Permission } from "@/lib/auth/roles";
 import { cn, fill, plural } from "@/lib/format";
-import { portalNow } from "@/lib/portal/clock";
-import { patchCampaign, saveCampaign, useCampaigns, type EditableCampaign } from "@/lib/portal/content-store";
+import { patchCampaign, publishCampaign, saveCampaign, useCampaigns, type EditableCampaign } from "@/lib/portal/content-store";
 import { formatDayMonth, formatTime, fromKigaliInput, toKigaliInput } from "@/lib/portal/format";
 import { useGetCategoriesQuery } from "@/lib/redux/api/menuApi";
 import ImageDrop from "./ImageDrop";
@@ -23,6 +22,7 @@ type Status = Campaign["status"] | "paused";
 
 const blankCampaign = (): EditableCampaign => ({
   promotionId: "new-campaign",
+  isDraftNew: true,
   status: "draft",
   tag: "promotion",
   placement: "home-offers",
@@ -69,7 +69,6 @@ export default function AdsManager({
   };
 
   const save = async (publish: boolean) => {
-    const later = Boolean(draft.startsAt && Date.parse(draft.startsAt) > portalNow());
     // A language left empty shows the other one until it is translated
     const both = (text: { en: string; fr: string }) => ({ en: text.en.trim() || text.fr, fr: text.fr.trim() || text.en });
     const campaign: EditableCampaign = {
@@ -77,17 +76,28 @@ export default function AdsManager({
       title: both(draft.title),
       text: both(draft.text),
       cta: both(draft.cta),
-      status: publish ? (later ? "scheduled" : "published") : "draft",
+      status: "draft",
       paused: false,
     };
     setError(false);
     try {
-      const saved = await saveCampaign(campaign);
+      let saved = await saveCampaign(campaign);
+      setDraft(saved);
+      if (publish) saved = await publishCampaign(saved.promotionId);
       setDraft(saved);
       setMessage(publish ? c.editor.publishedToast : c.editor.saved);
-    } catch {
+    } catch (cause) {
       setError(true);
-      setMessage(t.saveError);
+      const status = typeof cause === "object" && cause !== null && "status" in cause && typeof cause.status === "number"
+        ? cause.status
+        : null;
+      setMessage(
+        status === 403 ? t.permissionError
+          : status === 409 ? t.conflictError
+            : status === 422 ? t.validationError
+              : status ? fill(t.saveErrorStatus, { status })
+                : t.saveError,
+      );
     }
   };
 
@@ -96,12 +106,15 @@ export default function AdsManager({
     setDraft({
       ...template,
       promotionId: `campaign-${Date.now().toString(36)}`,
+      isDraftNew: true,
       status: "draft",
       title: { en: "", fr: "" },
       text: { en: "", fr: "" },
       startsAt: undefined,
       endsAt: undefined,
       schedule: undefined,
+      image: "",
+      imageId: undefined,
       paused: false,
     });
     setMessage(null);
@@ -159,7 +172,7 @@ export default function AdsManager({
                     width={496}
                     height={180}
                     sizes="248px"
-                    unoptimized={campaign.image.startsWith("blob:")}
+                    unoptimized
                     className="h-[5.5rem] w-full rounded-md object-cover"
                   />
                   <p className="mt-3 text-[0.8125rem] font-semibold">{localize(campaign.title, lang) || t.editorNew}</p>
@@ -241,6 +254,7 @@ export default function AdsManager({
                 upload: c.editor.upload,
                 uploading: c.editor.uploading,
                 uploadError: c.editor.uploadError,
+                uploadStatus: c.editor.uploadStatus,
                 invalid: c.editor.invalidImage,
               }}
               onImage={(image, imageId) => update({ image, imageId })}
@@ -317,7 +331,7 @@ export default function AdsManager({
                   alt={previewTitle}
                   fill
                   sizes="(min-width: 1280px) 21rem, 24rem"
-                  unoptimized={draft.image.startsWith("blob:")}
+                  unoptimized
                   className="object-cover"
                 />
               )}

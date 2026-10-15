@@ -22,8 +22,8 @@ const nextConfig: NextConfig = {
   },
 
   experimental: {
-    // Client router cache: pages already visited/prefetched open instantly when coming back
-    staleTimes: { dynamic: 60, static: 600 },
+    // Recheck dynamic portal routes on navigation; only static storefront routes use a long cache.
+    staleTimes: { dynamic: 0, static: 600 },
   },
 
   async headers() {

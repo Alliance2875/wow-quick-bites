@@ -24,6 +24,7 @@ export default function PairsWithCard({
         alt={localize(item.name, lang)}
         width={120}
         height={120}
+        unoptimized={item.image.startsWith("http")}
         className="h-28 w-28 shrink-0 rounded-xl object-cover"
       />
       <div className="flex-1">

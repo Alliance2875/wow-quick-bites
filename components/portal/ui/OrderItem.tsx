@@ -25,6 +25,7 @@ export function ItemThumb({ item, lang, size = "md" }: { item: MenuItem; lang: L
       width={144}
       height={128}
       sizes={size === "md" ? "72px" : "56px"}
+      unoptimized={item.image.startsWith("http")}
       className={cn("shrink-0 rounded-md object-cover", size === "md" ? "h-16 w-[4.5rem]" : "h-12 w-14")}
     />
   );

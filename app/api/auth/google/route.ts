@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
   const next = params.get("next") ?? "";
   const config = googleConfig();
 
-  if (!config || !process.env.BACKEND_FRONTEND_SECRET) {
+  if (!config) {
     return NextResponse.redirect(new URL(`${localePath(lang, routes.signIn)}?error=google-config`, request.url));
   }
 

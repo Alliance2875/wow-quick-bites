@@ -65,7 +65,7 @@ export default function OptionsModal({
     >
       <div className="max-h-[88vh] overflow-y-auto">
         <div className="relative h-56 sm:h-64">
-          <Image src={item.image} alt="" fill sizes="576px" className="object-cover" />
+          <Image src={item.image} alt="" fill sizes="576px" unoptimized={item.image.startsWith("http")} className="object-cover" />
           <button
             type="button"
             onClick={onClose}

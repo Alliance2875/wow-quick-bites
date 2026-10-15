@@ -2,6 +2,7 @@ export const account = {
   google: "Continue with Google",
   googleError: "Google sign-in did not complete. Try again or use your email.",
   googleConfigError: "Google sign-in is not configured for this site. Please contact the administrator.",
+  googleBackendConfigError: "Google sign-in reached the site, but its backend connection is not configured. Please contact the administrator.",
   or: "or",
   fields: {
     fullName: "Full name",
