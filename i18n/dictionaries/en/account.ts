@@ -1,6 +1,7 @@
 export const account = {
   google: "Continue with Google",
   googleError: "Google sign-in did not complete. Try again or use your email.",
+  googleConfigError: "Google sign-in is not configured for this site. Please contact the administrator.",
   or: "or",
   fields: {
     fullName: "Full name",
@@ -22,6 +23,9 @@ export const account = {
     expired: "This step has expired. Please start again.",
     tooMany: "Too many attempts. Request a new code.",
     wait: "Please wait a few seconds before asking for another code.",
+    invitation: "This invitation link is invalid or has already been used.",
+    invitationExpired: "This invitation has expired. Ask the administrator to send a new one.",
+    weakPassword: "The password does not meet the security requirements.",
   },
   signIn: {
     metaTitle: "Sign in",
@@ -60,6 +64,14 @@ export const account = {
   finishSignIn: {
     metaTitle: "Signing in",
     redirecting: "Signing you in…",
+  },
+  invitation: {
+    metaTitle: "Accept manager invitation",
+    title: "Set your password",
+    subtitle: "Choose a password to activate your manager account.",
+    submit: "Accept invitation",
+    pending: "Activating your account…",
+    missingToken: "This invitation link is missing its token. Ask the administrator to send a new invitation.",
   },
   recovery: {
     metaTitle: "Password recovery",

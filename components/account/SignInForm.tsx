@@ -22,6 +22,7 @@ export default function SignInForm({ lang, dict }: { lang: Locale; dict: Diction
   const next = safeNext(params.get("next"), "");
   // Set by the Google callback when sign-in with Google did not complete
   const googleFailed = params.get("error") === "google";
+  const googleConfigError = params.get("error") === "google-config";
   const passwordLabels = { show: dict.fields.showPassword, hide: dict.fields.hidePassword };
 
   // The Server Action checks the credentials and sets the HttpOnly session cookie;
@@ -40,7 +41,14 @@ export default function SignInForm({ lang, dict }: { lang: Locale; dict: Diction
     next ? `${localePath(lang, path)}?next=${encodeURIComponent(next)}` : localePath(lang, path);
 
   return (
-    <AuthCard title={dict.signIn.title} subtitle={dict.signIn.subtitle} dict={dict} lang={lang} next={next}>
+    <AuthCard
+      title={dict.signIn.title}
+      subtitle={dict.signIn.subtitle}
+      dict={dict}
+      lang={lang}
+      next={next}
+      googleConfigError={googleConfigError}
+    >
       {googleFailed && !state && (
         <div className="mb-5">
           <AuthError message={dict.googleError} />

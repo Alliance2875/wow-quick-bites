@@ -238,7 +238,7 @@ export const staff: StaffDict = {
       previewIn: "Langue de l’aperçu",
       requiredName: "Indiquez un nom en anglais ou en français.",
       chooseFile: "Choisir un fichier",
-      imageNote: "La nouvelle photo est un aperçu local tant que le backend ne stocke pas les fichiers.",
+      imageNote: "Les photos importées sont stockées sur le serveur et apparaissent sur la vitrine après publication.",
       loadError: "Impossible de charger les catégories, sections de boissons ou étiquettes du menu.",
     },
     preview: {
@@ -284,6 +284,7 @@ export const staff: StaffDict = {
       saveDraft: "Enregistrer le brouillon",
       publish: "Publier la publicité",
       updated: "Campagne mise à jour.",
+      saveError: "Impossible d’enregistrer ou de publier la campagne. Veuillez réessayer.",
     },
     business: {
       title: "Paramètres de l’établissement et coordonnées",

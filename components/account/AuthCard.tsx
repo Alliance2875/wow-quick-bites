@@ -20,6 +20,7 @@ export default function AuthCard({
   dict,
   lang,
   next,
+  googleConfigError = false,
   children,
 }: {
   title: string;
@@ -28,6 +29,7 @@ export default function AuthCard({
   lang: Locale;
   /** Page to return to after signing in (?next=) */
   next: string;
+  googleConfigError?: boolean;
   children: React.ReactNode;
 }) {
   // Full page navigation: the Route Handler redirects to Google's consent screen
@@ -44,6 +46,9 @@ export default function AuthCard({
       >
         {dict.google}
       </a>
+      {googleConfigError && (
+        <p role="alert" className="mt-3 text-center text-sm text-critical">{dict.googleConfigError}</p>
+      )}
 
       <p className="my-5 text-center text-xs text-muted-foreground">{dict.or}</p>
 
@@ -51,4 +56,3 @@ export default function AuthCard({
     </AuthShell>
   );
 }
-

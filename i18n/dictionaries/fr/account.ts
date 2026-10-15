@@ -3,6 +3,7 @@ import type { AccountDict } from "../en/account";
 export const account: AccountDict = {
   google: "Continuer avec Google",
   googleError: "La connexion avec Google n’a pas abouti. Réessayez ou utilisez votre e-mail.",
+  googleConfigError: "La connexion Google n’est pas configurée sur ce site. Contactez l’administrateur.",
   or: "ou",
   fields: {
     fullName: "Nom complet",
@@ -24,6 +25,9 @@ export const account: AccountDict = {
     expired: "Cette étape a expiré. Veuillez recommencer.",
     tooMany: "Trop de tentatives. Demandez un nouveau code.",
     wait: "Patientez quelques secondes avant de demander un nouveau code.",
+    invitation: "Ce lien d’invitation est invalide ou a déjà été utilisé.",
+    invitationExpired: "Cette invitation a expiré. Demandez à l’administrateur de vous en envoyer une nouvelle.",
+    weakPassword: "Le mot de passe ne respecte pas les exigences de sécurité.",
   },
   signIn: {
     metaTitle: "Connexion",
@@ -62,6 +66,14 @@ export const account: AccountDict = {
   finishSignIn: {
     metaTitle: "Connexion",
     redirecting: "Connexion en cours…",
+  },
+  invitation: {
+    metaTitle: "Accepter l’invitation du gestionnaire",
+    title: "Choisissez votre mot de passe",
+    subtitle: "Choisissez un mot de passe pour activer votre compte gestionnaire.",
+    submit: "Accepter l’invitation",
+    pending: "Activation du compte…",
+    missingToken: "Le jeton est absent du lien d’invitation. Demandez à l’administrateur d’en envoyer un nouveau.",
   },
   recovery: {
     metaTitle: "Récupération du mot de passe",

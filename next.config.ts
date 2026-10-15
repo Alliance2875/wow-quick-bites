@@ -9,6 +9,13 @@ const nextConfig: NextConfig = {
 
   images: {
     formats: ["image/avif", "image/webp"],
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "wow-quick-bites-backend-ziwt.onrender.com",
+        pathname: "/**",
+      },
+    ],
     // Optimised images stay cached 31 days (photos in public/ rarely change; rename a file to refresh it)
     minimumCacheTTL: 60 * 60 * 24 * 31,
     qualities: [75, 85],

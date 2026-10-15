@@ -40,6 +40,10 @@ export const menuApi = apiSlice.injectEndpoints({
     }),
     getOptionGroups: builder.query<OptionGroup[], void>({
       query: () => "/menu/option-groups/",
+      transformResponse: (response: OptionGroup[] | Record<string, OptionGroup>) =>
+        Array.isArray(response)
+          ? response
+          : Object.entries(response).map(([id, group]) => ({ ...group, id: group.id || id })),
       providesTags: ["OptionGroups"],
     }),
     getTags: builder.query<Record<string, Localized>, void>({

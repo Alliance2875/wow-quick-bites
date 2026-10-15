@@ -14,12 +14,15 @@ export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
   const saved = await takeGoogleState();
   const lang: Locale = saved && isLocale(saved.lang) ? saved.lang : "en";
-  const fail = () => NextResponse.redirect(new URL(`${localePath(lang, routes.signIn)}?error=google`, request.url));
+  const fail = (configuration = false) =>
+    NextResponse.redirect(new URL(`${localePath(lang, routes.signIn)}?error=${configuration ? "google-config" : "google"}`, request.url));
 
   if (!saved || !params.get("state") || params.get("state") !== saved.state) return fail();
 
   const code = params.get("code");
-  if (!code || !googleConfig()) return fail();
+  if (!code) return fail();
+  if (!googleConfig()) return fail(true);
+  if (!process.env.BACKEND_FRONTEND_SECRET) return fail(true);
   const profile = await fetchGoogleProfile(request, code, saved.verifier);
   if (!profile) return fail();
 

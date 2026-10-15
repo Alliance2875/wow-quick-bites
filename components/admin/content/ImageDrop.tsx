@@ -8,7 +8,7 @@ import { useUploadImageMutation } from "@/lib/redux/api/adminApi";
 
 /**
  * Dashed drop zone with the current photo: drag an image in or choose a file.
- * The file stays a local preview (object URL) until the backend stores uploads.
+ * Selected files are uploaded immediately; the backend URL is used for previews and saves.
  */
 export default function ImageDrop({
   image,

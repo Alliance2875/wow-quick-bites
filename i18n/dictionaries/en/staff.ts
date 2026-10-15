@@ -229,7 +229,7 @@ export const staff = {
       previewIn: "Preview language",
       requiredName: "Add a name in English or French.",
       chooseFile: "Choose a file",
-      imageNote: "The new photo is a local preview until the backend stores uploads.",
+      imageNote: "Uploaded photos are stored on the backend and appear on the storefront after publishing.",
       loadError: "Menu categories, drink sections or tags could not be loaded.",
     },
     preview: {
@@ -275,6 +275,7 @@ export const staff = {
       saveDraft: "Save draft",
       publish: "Publish ad",
       updated: "Campaign updated.",
+      saveError: "The campaign could not be saved or published. Please try again.",
     },
     business: {
       title: "Business & contact settings",

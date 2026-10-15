@@ -87,7 +87,7 @@ export default function AdsManager({
       setMessage(publish ? c.editor.publishedToast : c.editor.saved);
     } catch {
       setError(true);
-      setMessage(c.editor.saveError);
+      setMessage(t.saveError);
     }
   };
 
@@ -115,7 +115,7 @@ export default function AdsManager({
       setMessage(t.updated);
     } catch {
       setError(true);
-      setMessage(c.editor.saveError);
+      setMessage(t.saveError);
     }
   };
 

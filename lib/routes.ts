@@ -12,6 +12,7 @@ export const routes = {
   orderConfirmation: "/checkout/confirmation",
   signIn: "/sign-in",
   signUp: "/sign-up",
+  acceptInvitation: "/accept-invitation",
   forgotPassword: "/forgot-password",
   /** One-time code sent by email after "Create account" */
   verifyEmail: "/verify-email",

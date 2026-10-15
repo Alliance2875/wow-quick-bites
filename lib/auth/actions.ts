@@ -38,7 +38,10 @@ export type AuthError =
   | "code"
   | "expired"
   | "tooMany"
-  | "wait";
+  | "wait"
+  | "invitation"
+  | "invitationExpired"
+  | "weakPassword";
 
 export type AuthFormState =
   | { error: AuthError }
@@ -218,6 +221,44 @@ export async function verifyEmailAction(_: AuthFormState, form: FormData): Promi
     if (codeErr === "code_expired" || res.status === 410) return { error: "expired" };
     if (codeErr === "invalid_code" || res.status === 400) return { error: "code" };
     return { error: "server" };
+  } catch {
+    return { error: "server" };
+  }
+
+  return { error: "server" };
+}
+
+/** Completes a manager invitation and starts the same signed server session as sign-in. */
+export async function acceptInvitationAction(_: AuthFormState, form: FormData): Promise<AuthFormState> {
+  const token = text(form, "token");
+  const password = String(form.get("password") ?? "");
+  const lang = langOf(text(form, "lang"));
+  if (!token || !password) return { error: "missing" };
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/invitations/accept/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, password }),
+      cache: "no-store",
+    });
+
+    if (res.ok) {
+      const data = (await res.json()) as BackendAuthResult;
+      return startSession(sessionStart(data.user), {
+        lang,
+        next: "",
+        phone: data.user.phone || undefined,
+        access: data.access,
+        refresh: data.refresh,
+      });
+    }
+
+    const err = await res.json().catch(() => null);
+    const code = err?.error?.code;
+    if (res.status === 410 || code === "invitation_expired") return { error: "invitationExpired" };
+    if (res.status === 422 || code === "password_too_weak") return { error: "weakPassword" };
+    if (res.status === 400 || res.status === 404 || code === "invalid_invitation") return { error: "invitation" };
   } catch {
     return { error: "server" };
   }

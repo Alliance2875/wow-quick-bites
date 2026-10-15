@@ -137,7 +137,7 @@ export default function MenuManager({
     }
     // A language left empty shows the other one until it is translated
     const both = (text: { en: string; fr: string }) => ({ en: text.en.trim() || text.fr, fr: text.fr.trim() || text.en });
-    const item: EditableItem = { ...draft, name: both(draft.name), description: both(draft.description), isDraftNew: false };
+    const item: EditableItem = { ...draft, name: both(draft.name), description: both(draft.description) };
     try {
       const saved = await saveItem(item, state);
       setDraft({ ...saved, isDraftNew: false, state });
