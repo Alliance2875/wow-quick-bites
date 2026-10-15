@@ -62,7 +62,7 @@ export default function ClientProfile({ lang, viewer, dict }: Props) {
   ];
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-7">
+    <div className="space-y-7">
       <PageHeader title={t.title} subtitle={t.subtitle} />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
@@ -140,7 +140,7 @@ export default function ClientProfile({ lang, viewer, dict }: Props) {
                 <>
                   <dl className="mt-7 space-y-6 sm:pl-12">
                     {rows.map((row) => (
-                      <div key={row.label} className="grid gap-1 sm:grid-cols-[10rem_minmax(0,1fr)]">
+                      <div key={row.label} className="grid gap-1 sm:grid-cols-[13rem_minmax(0,1fr)]">
                         <dt>{row.label}</dt>
                         <dd className="break-words">{row.value}</dd>
                       </div>
