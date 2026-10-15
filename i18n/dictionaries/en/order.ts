@@ -6,8 +6,20 @@ export const order = {
   dateFormat: "{day} at {time}",
   receiptNote:
     "Submission receipt · This records the moment of checkout, before manager acceptance. Open tracking for the latest status.",
+  receiptNoteGuest: "Submission receipt · This records the moment of checkout, before manager acceptance. Keep your order ID.",
   receiptTitle: "Your receipt · {id}",
   receiptMeta: "{items} · Standard menu prices · Amounts in RWF",
+  /** Guests have no account: no tracking page or notifications, the manager calls them */
+  guestNext: {
+    review: {
+      title: "Manager reviews your order",
+      text: "The manager accepts your order and starts preparing it. If anything needs checking, they call {phone}.",
+    },
+    ready: {
+      title: "We call you when it’s ready",
+      text: "Keep your phone nearby: the manager calls {phone} when your order is ready for pickup.",
+    },
+  },
   next: {
     title: "What happens next",
     review: {
@@ -30,6 +42,9 @@ export const order = {
     clientCode: "Permanent client code",
     orderId: "Order ID",
     note: "Your client code identifies you across all purchases. The order ID identifies this purchase only.",
+    guest: "Guest order · no account",
+    phone: "Phone",
+    guestNote: "Keep your order ID. The manager calls {phone} when your order is ready.",
   },
   payment: {
     title: "Payment & fulfilment",
@@ -39,7 +54,6 @@ export const order = {
     amountDue: "Amount due",
   },
   track: "Track order {id}",
-  chat: "Open chat",
   notifications: "Notifications",
   myOrders: "My orders",
   none: {

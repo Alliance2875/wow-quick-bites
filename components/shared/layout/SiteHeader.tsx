@@ -34,8 +34,9 @@ export default function SiteHeader({ lang, dict }: { lang: Locale; dict: Diction
           </ButtonLink>
           <CartButton href={href(routes.cart)} label={dict.header.cart} />
           <AccountButton
+            lang={lang}
             signInHref={href(routes.signIn)}
-            labels={{ signIn: dict.header.signIn, signOut: dict.header.signOut }}
+            labels={{ signIn: dict.header.signIn, signOut: dict.header.signOut, account: dict.header.account }}
           />
 
           {/* Mobile menu — <details> needs no JS state */}

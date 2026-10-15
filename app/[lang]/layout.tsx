@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import SiteFooter from "@/components/shared/layout/SiteFooter";
 import InlineScript from "@/components/shared/layout/InlineScript";
-import SiteHeader from "@/components/shared/layout/SiteHeader";
 import { locales } from "@/i18n/config";
 import { resolveLang } from "@/i18n/get-dictionary";
 import { defaultTheme, themeScript } from "@/lib/theme";
@@ -26,7 +24,7 @@ export async function generateMetadata({ params }: LayoutProps<"/[lang]">): Prom
 }
 
 export default async function RootLayout({ children, params }: LayoutProps<"/[lang]">) {
-  const { lang, dict } = await resolveLang(params);
+  const { lang } = await resolveLang(params);
 
   return (
     <html
@@ -38,11 +36,8 @@ export default async function RootLayout({ children, params }: LayoutProps<"/[la
       <head>
         <InlineScript html={themeScript} />
       </head>
-      <body className="flex min-h-full flex-col bg-background text-foreground">
-        <SiteHeader lang={lang} dict={dict.common} />
-        <main className="flex-1">{children}</main>
-        <SiteFooter lang={lang} dict={dict.common} />
-      </body>
+      {/* Header/footer come from the (site) layout; the portal has its own sidebar shell */}
+      <body className="flex min-h-full flex-col bg-background text-foreground">{children}</body>
     </html>
   );
 }
