@@ -41,7 +41,13 @@ export const checkout = {
   payment: {
     title: "Payment",
     dueOnPickup: "{amount} will be due when you collect your order.",
-    dueMobile: "You will receive a {method} payment request of {amount} on your phone.",
+    // dueMobile: "You will receive a {method} payment request of {amount} on your phone.",
+    dueMobile: "Pay via {method}, dial 182*1*1 0786156132*{amount} on your phone, Names: Wow Quick Bites",
+    //Mobile Money
+// Pay via MTN Mobile Money or Airtel Money
+
+// dial 182*1*1 0786156132*money to pay RWF
+
   },
   notes: {
     title: "Order notes",

@@ -177,7 +177,7 @@ export default function OrderConfirmation({ lang, dict }: { lang: Locale; dict: 
           {/* Tracking and notifications live in the client area: accounts only */}
           {!order.guest && (
             <>
-              <ButtonLink href={href(routes.orderConfirmation)} block size="lg">
+              <ButtonLink href={href(routes.accountOrders)} block size="lg">
                 {fill(t.track, { id: order.id })} <Icon name="arrowRight" className="h-4 w-4" />
               </ButtonLink>
               <div className="flex justify-between text-sm font-semibold text-accent">

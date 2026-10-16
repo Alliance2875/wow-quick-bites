@@ -44,7 +44,9 @@ export const checkout: CheckoutDict = {
   payment: {
     title: "Paiement",
     dueOnPickup: "{amount} seront à régler au retrait de votre commande.",
-    dueMobile: "Vous recevrez une demande de paiement {method} de {amount} sur votre téléphone.",
+    // dueMobile: "Vous recevrez une demande de paiement {method} de {amount} sur votre téléphone.",
+    dueMobile: "Payer via {method}, Composer 182*1*1 0786156132*{amount}, Noms: Wow Quick Bites",
+
   },
   notes: {
     title: "Remarques sur la commande",

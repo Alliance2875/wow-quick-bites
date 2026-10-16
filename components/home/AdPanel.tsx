@@ -66,6 +66,7 @@ function PromoBlock({ promo, lang }: { promo: Promotion; lang: Locale }) {
             {!highlight.labelFirst && <p className="mt-1 text-sm font-bold">{localize(highlight.label, lang)}</p>}
           </div>
         ) : (
+          // <p className="text-xl font-extrabold leading-tight">{localize(promo.title, lang)}</p>
           <p className="text-xl font-extrabold leading-tight">{localize(promo.title, lang)}</p>
         )}
         <Image
